@@ -1,0 +1,39 @@
+# Target directory
+target/
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.settings/
+.project
+.classpath
+.factorypath
+.metadata/
+
+# VS Code
+.vscode/
+
+# Local configuration & Secrets
+*.local
+application-local.properties
+application-local.yml
+*.jks
+*.p12
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
