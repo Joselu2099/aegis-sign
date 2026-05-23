@@ -1,0 +1,104 @@
+{
+  "goal": "Implement the self-hosted microservice aegis-sign for KYC and FEA (Firma Electrónica Avanzada) using reactive Java 21, Spring WebFlux, and PostgreSQL R2DBC.",
+  "tasks": [
+    {
+      "id": "task-01",
+      "title": "Initialize Maven project layout and build file",
+      "description": "Create the base directory structure for the Spring Boot project and write pom.xml containing dependencies for Spring WebFlux, Spring Data R2DBC, PostgreSQL driver r2dbc-postgresql, Redis react-redis, Flyway migration, springdoc-openapi-webflux-ui, actuator, lombok, and testing libraries (JUnit 5, testcontainers, reactor-test, assertj, archunit). Also create a dummy AegisSignApplication.java entrypoint.",
+      "dependencies": [],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-02",
+      "title": "Setup Docker Compose and Application Settings",
+      "description": "Create a docker-compose.yml file at the root to spin up PostgreSQL 16, Redis 7, and MinIO locally. Write src/main/resources/application.yml configuring WebFlux port (8080), R2DBC connection URL, Redis cache settings, MinIO access keys, and server-side encryption properties.",
+      "dependencies": ["task-01"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-flash",
+      "status": "pending"
+    },
+    {
+      "id": "task-03",
+      "title": "Create Flyway database schema migrations",
+      "description": "Write database migration V1__init_schema.sql under src/main/resources/db/migration defining schema tables: kyc_sessions (id UUIDv4 PK, status VARCHAR, expires_at TIMESTAMP, extracted_data JSONB, biometric_score DECIMAL), contracts (id UUIDv4 PK, template_id VARCHAR, status VARCHAR, document_hash_sha256 VARCHAR, minio_uri VARCHAR, created_at TIMESTAMP), signatures (id UUIDv4 PK, contract_id UUID FK, signer_info JSONB, x509_certificate_sn VARCHAR, timestamp TIMESTAMP), and audit_trails (id UUIDv4 PK, contract_id UUID FK, kyc_session_id UUID FK, trail_manifest JSONB, final_signed_pdf_uri VARCHAR). Add indices for optimization.",
+      "dependencies": ["task-02"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-04",
+      "title": "Implement Domain Models and Ports (Hexagonal)",
+      "description": "Create packages: com.aegissign.domain.model and com.aegissign.domain.port. Write domain entities (KycSession, Contract, Signature, AuditTrail) free of Spring annotations, and declare interface ports (KycRepositoryPort, ContractRepositoryPort, StoragePort, SignatureServicePort, EncryptionPort).",
+      "dependencies": ["task-01"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-05",
+      "title": "Implement Database Infrastructure Adapters (R2DBC and Redis)",
+      "description": "Create package com.aegissign.infrastructure.adapter.db. Write R2DBC entity mappings, Spring Data R2DBC repositories, and adapter classes wrapping them to satisfy domain repository ports. Implement Redis session cache helper and Token Bucket rate limiter filter.",
+      "dependencies": ["task-03", "task-04"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-06",
+      "title": "Implement MinIO storage adapter and PDF compiler",
+      "description": "Create package com.aegissign.infrastructure.adapter.storage. Write the MinIO client configuration and adapter satisfying StoragePort to upload and download documents. Create a PDF template compiler utilizing OpenPDF or iText to compile PDF files from JSON templates.",
+      "dependencies": ["task-04", "task-05"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-07",
+      "title": "Implement KYC engine (OCR, MRZ check, Biometrics match)",
+      "description": "Create package com.aegissign.domain.service. Implement MRZ check validation logic (ICAO Doc 9303 checksums verification for passport and identity cards). Write OCR extractor wrapper and biometric match 1:1 score calculation (calculating face match using local calculations or mock matching score based on threshold comparison).",
+      "dependencies": ["task-04"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-08",
+      "title": "Implement Signature cryptographic engine",
+      "description": "Create package com.aegissign.infrastructure.adapter.crypto. Write SHA-256 hash calculator, PAdES digital signer using internal PKI certificate, and safe Keystore simulator loading keys securely from properties.",
+      "dependencies": ["task-04"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-09",
+      "title": "Implement Application Use Cases",
+      "description": "Create package com.aegissign.application.usecase. Implement usecase interactor services: KycUseCase (handles session verification lifecycle), SignatureUseCase (handles contract hash preparation, signing, and audit trail compilation with metadata including user agent and IP).",
+      "dependencies": ["task-05", "task-06", "task-07", "task-08"],
+      "pool": "gemini_cli",
+      "model": "gemiss-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-10",
+      "title": "Create WebFlux Controllers and RFC 7807 advice",
+      "description": "Create com.aegissign.infrastructure.adapter.web. Write REST controllers with reactive Mono/Flux endpoints: /api/v1/kyc/session, /api/v1/kyc/upload, /api/v1/signatures/prepare, /api/v1/signatures/sign. Write ApiResponse envelope and global REST controller exception advice implementing RFC 7807 specifications.",
+      "dependencies": ["task-09"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    },
+    {
+      "id": "task-11",
+      "title": "Create Test Suite (JUnit 5, WebTestClient, Testcontainers, ArchUnit)",
+      "description": "Create tests under src/test/java. Write Unit tests for domain models and usecases using Mockito and StepVerifier. Write Integration tests using Testcontainers (starting Postgres/Redis/MinIO containers) and WebTestClient to call controllers. Write ArchUnit test checking hexagonal packages isolation rules.",
+      "dependencies": ["task-10"],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
+      "status": "pending"
+    }
+  ]
+}
