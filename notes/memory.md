@@ -15,6 +15,7 @@
 ## Project Backlog (TODOs & Future Work)
 | Priority | Status | Task / Requirement | Context Link |
 |----------|--------|-------------------|--------------|
+| High     | DONE   | Initialize Database Schema (V1 Migration) | [PostgreSQL] |
 | High     | TODO   | Scaffold project structure (Maven/Gradle) | - |
 | High     | TODO   | Setup Docker Compose for Infra | README.md |
 | High     | TODO   | Implement Template & Clause Domain | [TemplateModule] |
@@ -29,6 +30,7 @@
 | 2026-05-23 | Hexagonal Architecture | To decouple domain logic from infrastructure (MinIO, Redis, OCR engines). | - |
 | 2026-05-23 | Reactive Stack | To handle high concurrency and large file streams without blocking. | - |
 | 2026-05-23 | Modular Contracts | Templates/Clauses allow for dynamic document generation without modifying code. | [TemplateModule] |
+| 2026-05-23 | Initial DB Schema | Defined tables for KYC, Contracts, Signatures, and Audit Trail using UUIDs and JSONB for flexibility. | V1__init_schema.sql |
 
 ## Legacy Conventions & Anti-patterns
 - **No Third-Party APIs**: Avoid using cloud-based OCR or Biometrics; all must be local/self-hosted.
