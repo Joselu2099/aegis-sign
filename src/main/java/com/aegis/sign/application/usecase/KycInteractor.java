@@ -38,12 +38,21 @@ public class KycInteractor implements KycUseCase {
     }
 
     @Override
-    public Mono<KycSession> uploadDocument(UUID sessionId, String documentType, byte[] content) {
+    public Mono<KycSession> submitIdDocument(UUID sessionId, byte[] content) {
         return kycRepositoryPort.findById(sessionId)
                 .flatMap(session -> {
-                    // Logic for document upload and OCR extraction
-                    // In a real scenario, we would use StoragePort and OcrExtractorService
-                    session.getDocumentMetadata().put(documentType, "UPLOADED");
+                    // Specific logic for ID document ingestion
+                    session.getDocumentMetadata().put("ID_DOCUMENT", "UPLOADED");
+                    return kycRepositoryPort.save(session);
+                });
+    }
+
+    @Override
+    public Mono<KycSession> submitBiometrics(UUID sessionId, byte[] content) {
+        return kycRepositoryPort.findById(sessionId)
+                .flatMap(session -> {
+                    // Specific logic for biometric ingestion
+                    session.getDocumentMetadata().put("BIOMETRICS", "UPLOADED");
                     return kycRepositoryPort.save(session);
                 });
     }

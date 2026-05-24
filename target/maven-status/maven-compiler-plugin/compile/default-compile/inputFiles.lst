@@ -10,6 +10,7 @@
 /Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/domain/port/StoragePort.java
 /Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/infrastructure/web/filter/TokenBucketRateLimiterFilter.java
 /Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/db/SignatureRepositoryAdapter.java
+/Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/infrastructure/worker/StoragePurgeWorker.java
 /Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/domain/port/AuditTrailRepositoryPort.java
 /Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/redis/RedisSessionCacheHelper.java
 /Applications/XAMPP/xamppfiles/htdocs/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/db/entity/KycSessionEntity.java

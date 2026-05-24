@@ -48,12 +48,12 @@ sequenceDiagram
     participant DB as PostgreSQL / MinIO
 
     Note over App, Service: Paso A: Verificación de Identidad (KYC)
-    App->>Service: POST /api/v1/kyc/session?signerId=signer123
+    App->>Service: POST /api/v1/kyc/sessions?signerId=signer123
     Service-->>App: Retorna sessionId (UUID)
-    App->>Service: POST /api/v1/kyc/upload (Documento de Identidad)
+    App->>Service: POST /api/v1/kyc/sessions/{id}/documents (ID Document)
     Service->>DB: Guarda documento en MinIO y procesa OCR/MRZ
     Service-->>App: Estado: DOCUMENT_UPLOADED
-    App->>Service: POST /api/v1/kyc/upload (Selfie Facial)
+    App->>Service: POST /api/v1/kyc/sessions/{id}/biometrics (Selfie Facial)
     Service->>Service: Ejecuta Facial Match 1:1 local
     Service-->>App: Estado: APPROVED (Score biométrico)
 
@@ -87,12 +87,12 @@ Todos los endpoints retornan una estructura de respuesta unificada:
 
 #### A. Crear Sesión KYC
 Inicializa una sesión temporal de verificación de identidad.
-- **Ruta:** `POST /api/v1/kyc/session`
+- **Ruta:** `POST /api/v1/kyc/sessions`
 - **Parámetros de consulta (Query Parameters):**
   - `signerId` (String, requerido): Identificador único del firmante.
 - **Ejemplo de Request:**
   ```bash
-  curl -X POST "http://localhost:8080/api/v1/kyc/session?signerId=signer123"
+  curl -X POST "http://localhost:8080/api/v1/kyc/sessions?signerId=signer123"
   ```
 - **Ejemplo de Response (200 OK):**
   ```json
@@ -109,20 +109,44 @@ Inicializa una sesión temporal de verificación de identidad.
   }
   ```
 
-#### B. Subir Documentos y Fotos (OCR & Biometría)
-Carga archivos asociados a la sesión KYC.
-- **Ruta:** `POST /api/v1/kyc/upload`
+#### B. Subir Documento de Identidad
+Carga el documento de identidad para procesamiento OCR y MRZ.
+- **Ruta:** `POST /api/v1/kyc/sessions/{id}/documents`
 - **Tipo de Contenido:** `multipart/form-data`
 - **Parámetros:**
   - `file` (Multipart File): El archivo binario de la imagen (`JPEG`/`PNG`/`PDF`, máx 10MB).
-  - `type` (String): El tipo de archivo (`FRONT`, `BACK`, `SELFIE`).
-  - `sessionId` (UUID): El identificador de la sesión KYC creada previamente.
 - **Ejemplo de Request:**
   ```bash
-  curl -X POST "http://localhost:8080/api/v1/kyc/upload" \
-    -F "file=@/path/to/selfie.jpg" \
-    -F "type=SELFIE" \
-    -F "sessionId=a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2"
+  curl -X POST "http://localhost:8080/api/v1/kyc/sessions/a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2/documents" \
+    -F "file=@/path/to/id_card.jpg"
+  ```
+- **Ejemplo de Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2",
+      "status": "PENDING",
+      "documentMetadata": {
+        "ID_DOCUMENT": "UPLOADED"
+      },
+      "faceMatchScore": null,
+      "signerId": "signer123"
+    },
+    "error": null
+  }
+  ```
+
+#### C. Subir Biometría (Selfie)
+Carga el selfie facial para realizar la comparación biométrica.
+- **Ruta:** `POST /api/v1/kyc/sessions/{id}/biometrics`
+- **Tipo de Contenido:** `multipart/form-data`
+- **Parámetros:**
+  - `file` (Multipart File): El archivo binario de la imagen (`JPEG`/`PNG`, máx 10MB).
+- **Ejemplo de Request:**
+  ```bash
+  curl -X POST "http://localhost:8080/api/v1/kyc/sessions/a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2/biometrics" \
+    -F "file=@/path/to/selfie.jpg"
   ```
 - **Ejemplo de Response (200 OK):**
   ```json
@@ -132,7 +156,8 @@ Carga archivos asociados a la sesión KYC.
       "id": "a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2",
       "status": "APPROVED",
       "documentMetadata": {
-        "SELFIE": "UPLOADED"
+        "ID_DOCUMENT": "UPLOADED",
+        "BIOMETRICS": "UPLOADED"
       },
       "faceMatchScore": 0.95,
       "signerId": "signer123"
@@ -141,14 +166,14 @@ Carga archivos asociados a la sesión KYC.
   }
   ```
 
-#### C. Obtener Estado de la Sesión
+#### D. Obtener Estado de la Sesión
 Consulta los metadatos y el estado actual de una sesión KYC.
-- **Ruta:** `GET /api/v1/kyc/session/{id}`
+- **Ruta:** `GET /api/v1/kyc/sessions/{id}`
 - **Parámetros:**
   - `id` (UUID, path parameter): El ID de la sesión KYC.
 - **Ejemplo de Request:**
   ```bash
-  curl -X GET "http://localhost:8080/api/v1/kyc/session/a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2"
+  curl -X GET "http://localhost:8080/api/v1/kyc/sessions/a9a8f4c2-073c-41fb-89c0-5eb4e6e690a2"
   ```
 
 ---

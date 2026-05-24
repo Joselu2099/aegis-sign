@@ -17,7 +17,7 @@ com/aegis/sign/infrastructure/adapter/db/KycRepositoryAdapter$1.class
 com/aegis/sign/domain/model/AuditTrail.class
 com/aegis/sign/infrastructure/adapter/db/repository/KycSessionRepository.class
 com/aegis/sign/application/ports/in/KycUseCase.class
-com/aegis/sign/infrastructure/web/filter/TokenBucketRateLimiterFilter$Bucket.class
+com/aegis/sign/infrastructure/worker/StoragePurgeWorker.class
 com/aegis/sign/infrastructure/adapter/db/entity/KycSessionEntity.class
 com/aegis/sign/domain/port/EncryptionPort.class
 com/aegis/sign/infrastructure/adapter/db/entity/ContractEntity$ContractEntityBuilder.class

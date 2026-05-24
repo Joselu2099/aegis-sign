@@ -1,18 +1,19 @@
 package com.aegis.sign.infrastructure.adapter.storage;
 
 import com.aegis.sign.domain.port.StoragePort;
-import io.minio.GetObjectArgs;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
+import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.time.ZonedDateTime;
 
 @Slf4j
 @Component
@@ -52,5 +53,49 @@ public class MinioStorageAdapter implements StoragePort {
                 return stream.readAllBytes();
             }
         }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Override
+    public Flux<String> listOlderThan(int days) {
+        ZonedDateTime threshold = ZonedDateTime.now().minusDays(days);
+        return Flux.defer(() -> {
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                    ListObjectsArgs.builder()
+                            .bucket(bucket)
+                            .recursive(true)
+                            .build()
+            );
+            return Flux.fromIterable(results)
+                    .flatMap(result -> {
+                        try {
+                            Item item = result.get();
+                            if (item.lastModified().isBefore(threshold)) {
+                                return Mono.just(item.objectName());
+                            }
+                            return Mono.empty();
+                        } catch (Exception e) {
+                            log.error("Error listing MinIO objects", e);
+                            return Mono.error(e);
+                        }
+                    });
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Override
+    public Mono<Void> delete(String path) {
+        return Mono.fromRunnable(() -> {
+            try {
+                minioClient.removeObject(
+                        RemoveObjectArgs.builder()
+                                .bucket(bucket)
+                                .object(path)
+                                .build()
+                );
+                log.info("Deleted expired MinIO object: {}", path);
+            } catch (Exception e) {
+                log.error("Error deleting MinIO object: {}", path, e);
+                throw new RuntimeException(e);
+            }
+        }).subscribeOn(Schedulers.boundedElastic()).then();
     }
 }

@@ -21,7 +21,7 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
     *   Formatos permitidos: `JPEG`, `PNG`, `PDF`.
     *   Tamaño máximo permitido: 10 MB.
     *   Almacenamiento inmediato en un bucket privado de MinIO temporal, asociado al UUID de la sesión KYC.
-    *   *Estado:* Implementado a través del endpoint simplificado `/api/v1/kyc/upload` que sube el archivo a MinIO y asocia metadatos, pero no cuenta aún con endpoints dedicados diferenciados `/sessions/{id}/documents` y `/sessions/{id}/biometrics`.
+    *   *Estado:* Implementado a través de los endpoints dedicados `/api/v1/kyc/sessions/{id}/documents` y `/api/v1/kyc/sessions/{id}/biometrics`, los cuales suben el archivo a MinIO y asocian metadatos de forma diferenciada.
 
 #### [-] RF-KYC-03: Procesamiento OCR y MRZ (Simulado)
 *   **Descripción:** El sistema debe procesar el documento cargado para extraer campos de texto estructurados mediante reconocimiento óptico de caracteres (OCR) y verificar la validez de la zona de lectura mecánica (MRZ).

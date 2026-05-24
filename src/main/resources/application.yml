@@ -32,6 +32,11 @@ spring:
       time-to-live: 3600s
       cache-null-values: false
 
+rate-limit:
+  kyc:
+    capacity: 10
+    refill-rate: 1 # tokens per second
+
 # Object Storage: MinIO (S3 API)
 minio:
   endpoint: http://localhost:9000
