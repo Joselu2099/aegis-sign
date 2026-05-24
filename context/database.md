@@ -8,90 +8,68 @@
 ## Entity Relationship Diagram (ERD) / Schema Map
 ```mermaid
 erDiagram
-    TEMPLATES ||--o{ CLAUSES : "contains"
-    TEMPLATES ||--o{ CONTRACTS : "instantiates"
-    CONTRACTS ||--o{ SIGNATURES : "has"
-    CONTRACTS ||--|| AUDIT_TRAILS : "has"
-    KYC_DOCUMENTS ||--|| SIGNATURES : "verifies_signer"
+    contracts ||--o{ signatures : "has"
+    contracts ||--|| audit_trails : "has"
+    kyc_sessions ||--o{ audit_trails : "references"
     
-    TEMPLATES {
+    kyc_sessions {
         uuid id PK
-        string name
-        integer version
-        jsonb layout_metadata
-    }
-
-    CLAUSES {
-        uuid id PK
-        uuid template_id FK
-        text content
-        jsonb variables
-    }
-
-    CONTRACTS {
-        uuid id PK
-        uuid template_id FK
         string status
-        string content_hash
+        timestamp expires_at
+        jsonb extracted_data
+        decimal biometric_score
+    }
+
+    contracts {
+        uuid id PK
+        string template_id
+        string status
+        string document_hash_sha256
         string minio_uri
         timestamp created_at
     }
     
-    SIGNATURES {
+    signatures {
         uuid id PK
         uuid contract_id FK
-        string signer_id
-        timestamp signed_at
-        string signature_value
-        string cert_thumbprint
+        jsonb signer_info
+        string x509_certificate_sn
+        timestamp timestamp
     }
     
-    AUDIT_TRAILS {
+    audit_trails {
         uuid id PK
         uuid contract_id FK
-        jsonb events
-        timestamp closed_at
-    }
-
-    KYC_DOCUMENTS {
-        uuid id PK
-        string signer_id UK "Unique ID to link with signatures"
-        string first_name
-        string last_name
-        string document_number
-        date birth_date
-        string mrz_data
-        string face_match_score
+        uuid kyc_session_id FK
+        jsonb trail_manifest
+        string final_signed_pdf_uri
     }
 ```
 
 ## Complete Data Structure Inventory
 | Name (Table/Coll) | Description / Purpose | Key Fields (PK/FK/Index) | Related Entities | Business Object / Model |
 |-------------------|-----------------------|--------------------------|------------------|-------------------------|
-| templates         | Contract blueprints.  | PK: id                   | clauses, contracts| Template |
-| clauses           | Reusable legal text.  | PK: id, FK: template_id  | templates        | Clause |
-| contracts         | Stores metadata and status of contracts. | PK: id, FK: template_id | signatures, audit_trails | Contract |
-| signatures        | Individual signatures applied to contracts. | PK: id, FK: contract_id | contracts, kyc_documents | Signature |
-| audit_trails      | Immutable logs for legal compliance. | PK: id, FK: contract_id | contracts | AuditTrail |
-| kyc_documents     | Validated identity data. | PK: id, UK: signer_id    | signatures       | KycDocument |
-| kyc_sessions (Redis) | Temporary session state. | Key: session_id | - | KycSession |
-| otps (Redis)      | Temporary OTP codes for consent. | Key: signature_id | - | Otp |
+| kyc_sessions      | Stores KYC identity verification session details. | PK: id, Index: status, expires_at | audit_trails | KycSession / KycSessionEntity |
+| contracts         | Stores metadata and status of contracts to be signed. | PK: id, Index: status, template_id, created_at | signatures, audit_trails | Contract / ContractEntity |
+| signatures        | Records electronic signature events on contracts. | PK: id, FK: contract_id, Index: contract_id, x509_certificate_sn | contracts | Signature / SignatureEntity |
+| audit_trails      | Immutable legal evidence trail consolidating KYC and signature data. | PK: id, FK: contract_id, kyc_session_id, Index: contract_id, kyc_session_id | contracts, kyc_sessions | AuditTrail / AuditTrailEntity |
+| kyc_sessions (Redis) | Cache for fast, temporary KYC session lookups. | Key: UUID | - | KycSession (Ephemeral) |
 
 ## Relationships and Data Integrity
 - **Constraints/Relationships**: 
-    - `clauses` -> `templates` (Many-to-One).
-    - `contracts` -> `templates` (Many-to-One).
-    - `signatures` -> `contracts` (Many-to-One).
-    - `audit_trails` -> `contracts` (One-to-One).
-    - `kyc_documents.signer_id` matches `signatures.signer_id`.
-- **Logic in DB/Storage**: Use of `jsonb` in PostgreSQL for flexible but queryable audit events and clause variables.
+    - `signatures.contract_id` -> `contracts.id` (Many-to-One, Cascade On Delete).
+    - `audit_trails.contract_id` -> `contracts.id` (One-to-One, Cascade On Delete).
+    - `audit_trails.kyc_session_id` -> `kyc_sessions.id` (Many-to-One, Cascade On Delete).
+- **Logic in DB/Storage**: Use of `jsonb` in PostgreSQL for flexible but queryable properties:
+    - `kyc_sessions.extracted_data`: Holds parsed identity data (e.g. name, MRZ, birth date).
+    - `signatures.signer_info`: Holds signer metadata (e.g. signer ID, IP, user-agent).
+    - `audit_trails.trail_manifest`: Holds the complete log of cryptographic events and verification scores.
 - **Identity Generation**: UUIDs (v4) for all primary keys.
 
 ## Critical Query Patterns
-1. **Contract Assembly**: Joining `templates` and `clauses` to render the PDF.
-2. **Audit Trail Retrieval**: Fetching all events for a specific contract ID.
-3. **Signer Validation**: Verifying if `signer_id` in a signature request has a matching approved `kyc_documents` entry.
-
+1. **KYC Verification Verification**: Fetching an active, approved `kyc_session` matching the target signer before allowing signature.
+2. **Audit Trail Compilation**: Retrieving the consolidated events from the `audit_trails` table for a specific contract.
+3. **Signature Event Logging**: Saving a new entry in `signatures` and updating the contract status to `SIGNED`.
 ---
 
 ### Context & Navigation

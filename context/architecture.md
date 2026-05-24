@@ -45,16 +45,15 @@ graph TD
 
 ## System Integration Points
 - **Internal Modules**: 
-    - **KYC Module**: Handles document intake and identity verification.
-    - **Signature Module**: Manages hashing, signing, and audit trails.
-    - **Template Module**: Assembles contracts from reusable clauses.
+    - **KYC Module**: Handles document upload and identity verification session lifecycle.
+    - **Signature Module**: Manages pre-signature hashing, PAdES-compliant digital signing (simulated), and audit trail consolidation.
+    - **Template Compilation**: Compiles JSON templates containing text elements/variables into PDF documents using OpenPDF (packaged in `PdfTemplateCompiler`).
 - **External Services (Infrastructure Adapters)**:
-    - **PostgreSQL (R2DBC)**: Transactional storage.
-    - **Redis**: Temporary state for KYC sessions and OTPs.
-    - **MinIO**: Object storage for documents.
-    - **OCR Engine (Adapter)**: Encapsulates Tesseract / PDFBox to provide text extraction services to the domain.
-    - **Biometrics Engine (Adapter)**: Encapsulates OpenCV / DeepFace to provide face matching services to the domain.
-    - **PKI Adapter**: Interfaces with internal certificate management for digital signing.
+    - **PostgreSQL (R2DBC)**: Reactive storage for `kyc_sessions`, `contracts`, `signatures`, and `audit_trails`.
+    - **Redis**: Reactive cache client setup and configured (though the rate-limiter currently operates in-memory).
+    - **MinIO (S3 API)**: Object storage for input documents and generated PDFs, leveraging elastic scheduler for non-blocking operations.
+    - **OCR & Biometrics Services**: Encapsulated within the domain layer as OCR MRZ validators and Biometric Matchers with standard checking algorithms and localized mock-engines.
+    - **PKI Adapter**: Interfaces with internal certificate management to verify and apply digital signatures.
 
 ---
 

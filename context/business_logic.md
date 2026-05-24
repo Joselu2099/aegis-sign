@@ -12,61 +12,51 @@
 ## Full Domain Object / Model Inventory
 | Object Name | Description / Business Role | Fields / State | Parent/Related Objects | Persistence / Source |
 |-------------|-----------------------------|----------------|------------------------|----------------------|
-| KycSession  | Temporary session for identity verification. | id, status, documentMetadata, faceMatchScore | KycDocument, Biometrics | Redis (Temporary) |
-| KycDocument | Extracted data from identity document. | firstName, lastName, docNumber, birthDate, mrz | KycSession | PostgreSQL / MinIO |
-| Contract    | Document to be signed. | id, contentHash, status, uri, templateId | Signature, AuditTrail, Template | PostgreSQL / MinIO |
-| Template    | Blueprint for a contract. | id, name, version, layoutMetadata | Clause, Contract | PostgreSQL |
-| Clause      | Reusable legal fragment. | id, content, variables (JSON) | Template | PostgreSQL |
-| Signature   | Digital signature applied to a contract. | id, signerId, timestamp, hash, certificateThumbprint | Contract | PostgreSQL |
-| Otp         | One-Time Password for consent. | id, code, expiry, destination (Phone/Email) | Signature | Redis (Temporary) |
-| AuditTrail  | Complete log of a contract's lifecycle. | id, contractId, events (JSON) | Contract | PostgreSQL |
+| KycSession  | Ephemeral session for identity verification. | id, status, documentMetadata, faceMatchScore, signerId | AuditTrail | PostgreSQL / Redis (Configured) |
+| Contract    | Document to be signed. | id, contentHash, status, uri, templateId | Signature, AuditTrail | PostgreSQL |
+| Signature   | Digital signature details. | id, contractId, signerId, hash, certificateThumbprint, timestamp | Contract | PostgreSQL |
+| AuditTrail  | Immutable log of all events related to a contract. | id, contractId, kycSessionId, events, finalSignedPdfUri | Contract, KycSession | PostgreSQL |
 
 ## Object Relationship Diagram
 ```mermaid
 classDiagram
-    Template "1" *-- "many" Clause : "comprises"
-    Contract "1" -- "1" Template : "instantiates"
     Contract "1" *-- "many" Signature : "has"
     Contract "1" -- "1" AuditTrail : "has"
-    Signature "1" -- "1" Otp : "verified by"
-    KycSession "1" -- "1" KycDocument : "validates"
+    AuditTrail -- KycSession : "linked by kycSessionId"
     Signature -- KycSession : "linked by signer identity"
 ```
 
 ## Fundamental Business Rules
 1. **Identity Pre-requisite**: A contract cannot be signed unless the signer has a valid and approved KYC session.
-2. **Template Versioning**: Contracts must be generated from the specific version of a template approved at that time.
-3. **Document Immutability**: Once a contract is hashed and prepared for signature, its content cannot be modified.
-4. **Consent Verification**: Signature is only valid if the OTP sent to the verified user has been correctly validated.
-5. **Audit Completeness**: Every state transition (from KYC start to final signature) must be recorded in the Audit Trail with a high-precision timestamp and IP.
-6. **Anti-Spoofing**: Biometric validation must pass a liveness check to prevent fraud.
+2. **Document Immutability**: Once a contract is prepared for signature, its content cannot be modified.
+3. **Consent & Verification**: Every state transition (from KYC start to final signature) must be recorded in the Audit Trail with a high-precision timestamp, IP, and User Agent.
+4. **Anti-Spoofing & Validation**: Facial comparison score must meet a minimum matching threshold to approve a KYC session.
 
 ## Complex Functional Flows
 ### KYC Lifecycle
-- **Starting Point**: User requests a new KYC session via `/api/v1/kyc/sessions`.
+- **Starting Point**: Consumer application initiates a new KYC session for a signer via `/api/v1/kyc/session?signerId={signerId}`.
 - **Transformation Steps**: 
-    1. Upload Identity Document (OCR extraction via Tesseract/PDFBox).
-    2. Upload Selfie (Biometric comparison via OpenCV).
-    3. Decision Engine validates results.
+    1. Upload Identity Document (OCR extraction and validation).
+    2. Upload Selfie (Biometric comparison score computed against identity document photo).
+    3. Session verified and approved if biometric score meets threshold.
 - **Ending Point**: Session marked as `APPROVED` or `REJECTED`.
 
-### Contract Preparation
-- **Starting Point**: API request with template ID and variable values.
+### Contract Preparation & Hashing
+- **Starting Point**: A contract has been populated and saved to the database (e.g. from an upstream contract builder).
 - **Transformation Steps**:
-    1. Fetch Template and associated Clauses.
-    2. Inject variables into Clauses.
-    3. Render final PDF via Template Engine.
-    4. Store in MinIO and generate SHA-256 hash.
-- **Ending Point**: `Contract` object created in `PREPARED` state.
+    1. API consumer calls `/api/v1/signatures/prepare?contractId={contractId}`.
+    2. System fetches the contract and returns its content hash (SHA-256) pre-signature.
+- **Ending Point**: Contract prepared and hash returned to the client.
 
 ### Signature & Consent
-- **Starting Point**: User requests to sign a `PREPARED` contract.
+- **Starting Point**: User invokes `/api/v1/signatures/sign` with `SignRequest` (JSON containing `contractId`, `kycSessionId`, `signerId`, and `certificateThumbprint`).
 - **Transformation Steps**:
-    1. Generate and send OTP to the user's verified contact.
-    2. User submits OTP.
-    3. If OTP valid, apply X.509 digital signature (PAdES).
-    4. Update Audit Trail with consent evidence.
-- **Ending Point**: Contract marked as `SIGNED`.
+    1. Retrieve the prepared contract by ID.
+    2. Verify signer has an approved KYC session matching the signer ID.
+    3. Apply digital signature using the X.509 certificate.
+    4. Compile the audit trail (events including IP Address, User-Agent, and timestamps).
+    5. Save the signature and audit trail, and set contract status to `SIGNED`.
+- **Ending Point**: Contract status updated to `SIGNED` and Signature object returned.
 
 ---
 

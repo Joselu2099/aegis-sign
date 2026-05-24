@@ -1,63 +1,88 @@
 {
-  "goal": "Verify and complete the Aegis-Sign reactive microservice, addressing the pending integration tests by removing Docker dependencies and ensuring full compliance with KYC and PAdES requirements.",
+  "goal": "Completar la implementación funcional de aegis-sign sustituyendo los servicios simulados por integraciones reales (OCR, Biometría, PAdES), finalizar endpoints de ingesta, programar depuración de datos sensibles y habilitar las políticas de rate limiting.",
   "tasks": [
     {
-      "id": "audit_and_baseline",
-      "title": "Audit Implementation and Run Unit Tests",
-      "description": "Analyze the codebase in 'src/main/java' to confirm implementation of RF-KYC and RF-SIG requirements. Execute 'mvn test' to verify the 17 existing unit tests and ArchUnit tests. Capture and review results from 'target/surefire-reports'.",
+      "id": "kyc_upload_endpoints",
+      "title": "Implementar Endpoints Dedicados de Ingesta",
+      "description": "Modificar 'src/main/java/com/aegis/sign/infrastructure/adapter/web/KycController.java' para reemplazar o complementar el endpoint genérico con rutas dedicadas: POST '/sessions/{id}/documents' y POST '/sessions/{id}/biometrics'. Actualizar 'KycUseCase' y 'KycInteractor' para manejar estos tipos de archivos específicamente.",
       "dependencies": [],
       "pool": "gemini_cli",
+      "model": "gemini-2.5-flash",
       "status": "pending"
     },
     {
-      "id": "update_test_dependencies",
-      "title": "Add Embedded Test Dependencies",
-      "description": "Modify 'pom.xml' to include embedded alternatives for infrastructure components: 'it.antonio-vittorio:embedded-redis' for Redis and an S3/MinIO mock (e.g., 'com.adobe.testing:s3mock-junit5'). Ensure 'h2' is available for R2DBC testing to bypass the need for a local Docker daemon.",
-      "dependencies": [
-        "audit_and_baseline"
-      ],
+      "id": "rate_limiting_activation",
+      "title": "Activar Rate Limiting Reactivo",
+      "description": "Registrar e inyectar el filtro 'src/main/java/com/aegis/sign/infrastructure/web/filter/TokenBucketRateLimiterFilter.java' en la cadena de filtros de Spring WebFlux para aplicarlo a las rutas públicas de KYC, interactuando con la configuración de Redis.",
+      "dependencies": [],
       "pool": "gemini_cli",
+      "model": "gemini-2.5-flash",
       "status": "pending"
     },
     {
-      "id": "refactor_integration_tests",
-      "title": "Refactor Integration Test Infrastructure",
-      "description": "Modify 'src/test/java/com/aegis/sign/AbstractIntegrationTest.java' to remove '@Testcontainers' and '@Container' definitions. Implement manual startup/shutdown for embedded Redis and S3 mocks in '@BeforeAll' and '@AfterAll'. Update Spring context configuration to use H2 (r2dbc:h2:mem) for PostgreSQL testing.",
+      "id": "minio_purge_worker",
+      "title": "Implementar Worker de Purga para MinIO",
+      "description": "Crear un componente con @Scheduled en 'src/main/java/com/aegis/sign/infrastructure/adapter/storage/MinioCleanupWorker.java' que interactúe con 'MinioStorageAdapter' para listar y eliminar archivos (ej. biométricos y documentos temporales) que superen los 7 días de antigüedad, asegurando el RNF-04.",
+      "dependencies": [],
+      "pool": "gemini_cli",
+      "model": "gemini-2.5-flash",
+      "status": "pending"
+    },
+    {
+      "id": "pades_signature_implementation",
+      "title": "Implementar Sellado PAdES Real",
+      "description": "Modificar 'src/main/java/com/aegis/sign/infrastructure/adapter/signature/SignatureServiceAdapter.java' para sustituir el firmado simulado por criptografía real. Cargar un KeyStore local (JKS/PKCS12) y aplicar la firma PAdES utilizando BouncyCastle o la librería PDF en uso (OpenPDF), cumpliendo con RF-SIG-03 y RNF-03.",
+      "dependencies": [],
+      "pool": "jules_cloud",
+      "model": "claude-3-7-sonnet",
+      "status": "pending"
+    },
+    {
+      "id": "audit_trail_pdf_generation",
+      "title": "Generar y Firmar Audit Trail PDF",
+      "description": "Actualizar 'src/main/java/com/aegis/sign/application/usecase/SignatureInteractor.java' para generar un reporte PDF del Audit Trail recopilado de la sesión KYC y del contrato. Una vez generado el PDF, utilizar el 'SignatureServicePort' para firmarlo digitalmente antes de persistirlo en el repositorio final (RF-SIG-04).",
       "dependencies": [
-        "update_test_dependencies"
+        "pades_signature_implementation"
       ],
       "pool": "jules_cloud",
-      "model": "claude-3-5-sonnet",
+      "model": "claude-3-7-sonnet",
       "status": "pending"
     },
     {
-      "id": "run_integration_flow",
-      "title": "Execute and Fix Integration Tests",
-      "description": "Run 'mvn test -Dtest=SignatureControllerIntegrationTest' and address any failures. Ensure the full E2E flow (Contract Prepare -> Hash -> Sign) works using the embedded infrastructure. Verify that PAdES signatures are correctly applied to the generated PDFs.",
+      "id": "ocr_integration",
+      "title": "Integración de Motor OCR Local",
+      "description": "Sustituir los mocks en 'src/main/java/com/aegis/sign/domain/service/OcrExtractorService.java'. Integrar un wrapper de OCR local (ej. Tess4J) para extraer el texto de las imágenes y delegar la validación MRZ al servicio existente (RF-KYC-03).",
       "dependencies": [
-        "refactor_integration_tests"
+        "kyc_upload_endpoints"
       ],
-      "pool": "gemini_cli",
+      "pool": "jules_cloud",
+      "model": "claude-3-7-sonnet",
       "status": "pending"
     },
     {
-      "id": "verify_security_and_compliance",
-      "title": "Verify Security and PII Purge Logic",
-      "description": "Examine 'KycSession' management and storage services to verify RNF-04 (PII purge after 7 days) and RNF-03 (AES-256 encryption). If not already present, create a test in 'src/test/java/com/aegis/sign/domain/service/' to verify the expiration/purge logic for biometric data.",
+      "id": "biometric_processing",
+      "title": "Implementar Matching y Detección de Vida",
+      "description": "Actualizar 'src/main/java/com/aegis/sign/domain/service/BiometricMatchingService.java' utilizando librerías nativas/Java (ej. OpenCV Java o modelo ligero ONNX). Implementar cálculo de score real basado en características faciales y añadir validación de calidad/liveness simple (RF-KYC-04 y RF-KYC-05).",
       "dependencies": [
-        "run_integration_flow"
+        "kyc_upload_endpoints"
       ],
-      "pool": "gemini_cli",
+      "pool": "jules_cloud",
+      "model": "claude-3-7-sonnet",
       "status": "pending"
     },
     {
-      "id": "final_api_and_idempotency_check",
-      "title": "Verify Idempotency and Rate Limiting",
-      "description": "Review 'infrastructure/adapter/web/' for implementation of 'Idempotency-Key' (3.1) and Redis-based rate limiting (3.2). Perform a final check of the OpenAPI spec generation to ensure all endpoints are correctly documented as per RF-4.3.",
+      "id": "integration_tests_execution",
+      "title": "Asegurar y Ejecutar Pruebas de Integración",
+      "description": "Revisar 'src/test/java/com/aegis/sign/infrastructure/adapter/web/SignatureControllerIntegrationTest.java' y otras pruebas E2E. Configurar Testcontainers correctamente para PostgreSQL, Redis y MinIO, ejecutar la suite completa de pruebas y corregir cualquier regresión introducida.",
       "dependencies": [
-        "verify_security_compliance"
+        "rate_limiting_activation",
+        "minio_purge_worker",
+        "audit_trail_pdf_generation",
+        "ocr_integration",
+        "biometric_processing"
       ],
       "pool": "gemini_cli",
+      "model": "gemini-2.5-pro",
       "status": "pending"
     }
   ]
