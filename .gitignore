@@ -37,3 +37,8 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# Synthforge
+synthforge-plan.json
+.synthforge/
+
