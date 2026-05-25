@@ -1,8 +1,0 @@
-{
-  "completedTasks": [
-    "minio_cleanup_worker",
-    "kyc_endpoints",
-    "rate_limiting"
-  ],
-  "failedTasks": []
-}
