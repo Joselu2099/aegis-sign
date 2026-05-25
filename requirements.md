@@ -44,7 +44,7 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
     *   La comparación debe realizarse a través de un motor local integrado (e.g., ONNX Runtime o TensorFlow Java) sin enviar datos a APIs externas.
     *   Debe retornar un score de confianza (porcentaje de similitud de características vectoriales).
     *   El umbral (threshold) de aceptación de coincidencia debe ser configurable mediante variables de entorno (e.g., mínimo 85%).
-    *   *Estado:* Simulado. El `BiometricMatchingService` calcula una puntuación artificial basada en el tamaño del array de bytes (0.95 si son iguales, 0.75 si no).
+    *   *Estado:* Simulado. El `BiometricMatchingService` realiza una comparación estructural mock (basada en ratio de tamaños y varianza aleatoria) y una detección de liveness basada en variación de frames, devolviendo un `MatchResult` reactivo.
 
 ---
 
