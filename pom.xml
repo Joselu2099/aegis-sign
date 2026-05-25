@@ -83,6 +83,13 @@
 			<version>9.0.1</version>
 		</dependency>
 
+		<!-- OCR: Tess4j -->
+		<dependency>
+			<groupId>net.sourceforge.tess4j</groupId>
+			<artifactId>tess4j</artifactId>
+			<version>5.11.0</version>
+		</dependency>
+
 		<!-- PDF Generation: OpenPDF -->
 		<dependency>
 			<groupId>com.github.librepdf</groupId>
