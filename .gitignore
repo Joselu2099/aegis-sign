@@ -38,7 +38,14 @@ logs/
 tmp/
 temp/
 
+# Documentation
+docs/
+
 # Synthforge
 synthforge-plan.json
 .synthforge/
+
+docs/
+releases/
+logs/
 
