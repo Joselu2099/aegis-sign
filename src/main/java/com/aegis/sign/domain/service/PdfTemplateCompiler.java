@@ -13,6 +13,9 @@ import org.openpdf.text.Paragraph;
 import org.openpdf.text.pdf.PdfWriter;
 
 import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,6 +55,23 @@ public class PdfTemplateCompiler {
         } catch (Exception e) {
             log.error("Error compiling PDF template", e);
             throw new RuntimeException("Failed to compile PDF template", e);
+        }
+    }
+
+    /**
+     * Calculates the SHA-256 hash of the given content.
+     *
+     * @param content The byte array content to hash.
+     * @return Hex string representation of the SHA-256 hash.
+     */
+    public String calculateHash(byte[] content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(content);
+            return HexFormat.of().formatHex(encodedHash);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("SHA-256 algorithm not found", e);
+            throw new RuntimeException("Failed to calculate document hash", e);
         }
     }
 

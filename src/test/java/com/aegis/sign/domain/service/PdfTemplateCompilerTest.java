@@ -37,4 +37,14 @@ class PdfTemplateCompilerTest {
         assertEquals('D', (char) result[2]);
         assertEquals('F', (char) result[3]);
     }
+
+    @Test
+    void testCalculateHash() {
+        String content = "test content";
+        String expectedHash = "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72";
+        
+        String result = compiler.calculateHash(content.getBytes());
+        
+        assertEquals(expectedHash, result);
+    }
 }
