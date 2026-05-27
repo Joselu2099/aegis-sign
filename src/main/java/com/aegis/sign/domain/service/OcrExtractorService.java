@@ -30,8 +30,8 @@ public class OcrExtractorService {
     @Value("${tesseract.datapath}")
     private String tessdataPath;
 
-    public OcrExtractorService() {
-        this.tesseract = new Tesseract();
+    public OcrExtractorService(ITesseract tesseract) {
+        this.tesseract = tesseract;
     }
 
     @PostConstruct

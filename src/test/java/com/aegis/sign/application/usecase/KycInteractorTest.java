@@ -2,7 +2,9 @@ package com.aegis.sign.application.usecase;
 
 import com.aegis.sign.domain.model.KycSession;
 import com.aegis.sign.domain.port.KycRepositoryPort;
-import com.aegis.sign.domain.port.StoragePort; // Import StoragePort
+import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.service.MrzValidationService;
+import com.aegis.sign.domain.service.OcrExtractorService; // Import StoragePort
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,12 +27,16 @@ class KycInteractorTest {
     private KycRepositoryPort kycRepositoryPort;
     @Mock
     private StoragePort storagePort; // Mock StoragePort
+    @Mock
+    private OcrExtractorService ocrExtractorService;
+    @Mock
+    private MrzValidationService mrzValidationService;
 
     private KycInteractor kycInteractor;
 
     @BeforeEach
     void setUp() {
-        kycInteractor = new KycInteractor(kycRepositoryPort, storagePort); // Inject storagePort
+        kycInteractor = new KycInteractor(kycRepositoryPort, storagePort, ocrExtractorService, mrzValidationService); // Inject all dependencies
     }
 
     @Test

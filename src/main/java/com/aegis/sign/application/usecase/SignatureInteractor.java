@@ -8,6 +8,7 @@ import com.aegis.sign.domain.port.AuditTrailRepositoryPort;
 import com.aegis.sign.domain.port.ContractRepositoryPort;
 import com.aegis.sign.domain.port.SignatureRepositoryPort;
 import com.aegis.sign.domain.port.SignatureServicePort;
+import com.aegis.sign.domain.port.EncryptionPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -24,6 +25,7 @@ public class SignatureInteractor implements SignatureUseCase {
     private final SignatureServicePort signatureServicePort;
     private final SignatureRepositoryPort signatureRepositoryPort;
     private final AuditTrailRepositoryPort auditTrailRepositoryPort;
+    private final EncryptionPort encryptionPort;
 
     @Override
     public Mono<String> prepareContractHash(UUID contractId) {
@@ -34,16 +36,17 @@ public class SignatureInteractor implements SignatureUseCase {
     @Override
     public Mono<Signature> signContract(UUID contractId, UUID kycSessionId, String signerId, String certificateThumbprint, String ipAddress, String userAgent) {
         return contractRepositoryPort.findById(contractId)
-                .flatMap(contract -> signatureServicePort.sign(contract.getContentHash(), certificateThumbprint)
-                        .flatMap(signatureHash -> {
-                            Signature signature = Signature.builder()
-                                    .id(UUID.randomUUID())
-                                    .contractId(contractId)
-                                    .signerId(signerId)
-                                    .hash(signatureHash)
-                                    .certificateThumbprint(certificateThumbprint)
-                                    .timestamp(LocalDateTime.now())
-                                    .build();
+                .flatMap(contract -> encryptionPort.encrypt(certificateThumbprint)
+                        .flatMap(encryptedThumbprint -> signatureServicePort.sign(contract.getContentHash(), encryptedThumbprint)
+                                .flatMap(signatureHash -> {
+                                    Signature signature = Signature.builder()
+                                            .id(UUID.randomUUID())
+                                            .contractId(contractId)
+                                            .signerId(signerId)
+                                            .hash(signatureHash)
+                                            .certificateThumbprint(encryptedThumbprint) // Store encrypted thumbprint
+                                            .timestamp(LocalDateTime.now())
+                                            .build();
 
                             contract.setStatus(Contract.ContractStatus.SIGNED);
 
@@ -66,6 +69,7 @@ public class SignatureInteractor implements SignatureUseCase {
                                     .then(contractRepositoryPort.save(contract))
                                     .then(auditTrailRepositoryPort.save(auditTrail))
                                     .thenReturn(signature);
-                        }));
+                        })) // Corrected closing for encryptedThumbprint flatMap
+                ); // Corrected closing for contract flatMap
     }
 }
