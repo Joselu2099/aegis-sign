@@ -18,6 +18,8 @@ public class KycSession {
     private Map<String, String> documentMetadata;
     private Double faceMatchScore;
     private String signerId;
+    private boolean mrzValid = false; // Default to false
+    private String mrzValidationErrorMessage;
 
     public void approve(Double score) {
         this.faceMatchScore = score;
@@ -29,6 +31,6 @@ public class KycSession {
     }
 
     public enum KycStatus {
-        PENDING, APPROVED, REJECTED
+        PENDING, APPROVED, REJECTED, MRZ_FAILED
     }
 }

@@ -53,3 +53,7 @@ storage:
   purge:
     retention-days: 7 # Retention period for temporary files in days
     cron: 0 0 2 * * * # Daily at 2 AM
+
+tesseract:
+  datapath: /usr/share/tesseract-ocr/5/tessdata
+

@@ -104,6 +104,13 @@
 			<version>1.78</version>
 		</dependency>
 
+		<!-- ONNX Runtime -->
+		<dependency>
+			<groupId>com.microsoft.onnxruntime</groupId>
+			<artifactId>onnxruntime</artifactId>
+			<version>1.17.1</version>
+		</dependency>
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
