@@ -25,13 +25,15 @@ public class MinioStorageAdapter implements StoragePort {
     @Value("${minio.bucket}")
     private String bucket;
 
-    @Override
-    public Mono<String> upload(byte[] content, String path) {
+    @Value("${minio.temp-bucket}")
+    private String tempBucket;
+
+    private Mono<String> uploadToBucket(byte[] content, String path, String targetBucket) {
         return Mono.fromCallable(() -> {
             try (InputStream is = new ByteArrayInputStream(content)) {
                 minioClient.putObject(
                         PutObjectArgs.builder()
-                                .bucket(bucket)
+                                .bucket(targetBucket)
                                 .object(path)
                                 .stream(is, (long) content.length, -1L)
                                 .build()
@@ -39,6 +41,53 @@ public class MinioStorageAdapter implements StoragePort {
                 return path;
             }
         }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private Flux<String> listObjectsOlderThanFromBucket(int days, String targetBucket) {
+        ZonedDateTime threshold = ZonedDateTime.now().minusDays(days);
+        return Flux.defer(() -> {
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                    ListObjectsArgs.builder()
+                            .bucket(targetBucket)
+                            .recursive(true)
+                            .build()
+            );
+            return Flux.fromIterable(results)
+                    .flatMap(result -> {
+                        try {
+                            Item item = result.get();
+                            if (item.lastModified().isBefore(threshold)) {
+                                return Mono.just(item.objectName());
+                            }
+                            return Mono.empty();
+                        } catch (Exception e) {
+                            log.error("Error listing MinIO objects from bucket {}: {}", targetBucket, e.getMessage());
+                            return Mono.error(e);
+                        }
+                    });
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private Mono<Void> deleteObjectFromBucket(String path, String targetBucket) {
+        return Mono.fromRunnable(() -> {
+            try {
+                minioClient.removeObject(
+                        RemoveObjectArgs.builder()
+                                .bucket(targetBucket)
+                                .object(path)
+                                .build()
+                );
+                log.info("Deleted expired MinIO object: {} from bucket {}", path, targetBucket);
+            } catch (Exception e) {
+                log.error("Error deleting Minio object: {} from bucket {}: {}", path, targetBucket, e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }).subscribeOn(Schedulers.boundedElastic()).then();
+    }
+
+    @Override
+    public Mono<String> upload(byte[] content, String path) {
+        return uploadToBucket(content, path, bucket);
     }
 
     @Override
@@ -57,45 +106,26 @@ public class MinioStorageAdapter implements StoragePort {
 
     @Override
     public Flux<String> listOlderThan(int days) {
-        ZonedDateTime threshold = ZonedDateTime.now().minusDays(days);
-        return Flux.defer(() -> {
-            Iterable<Result<Item>> results = minioClient.listObjects(
-                    ListObjectsArgs.builder()
-                            .bucket(bucket)
-                            .recursive(true)
-                            .build()
-            );
-            return Flux.fromIterable(results)
-                    .flatMap(result -> {
-                        try {
-                            Item item = result.get();
-                            if (item.lastModified().isBefore(threshold)) {
-                                return Mono.just(item.objectName());
-                            }
-                            return Mono.empty();
-                        } catch (Exception e) {
-                            log.error("Error listing MinIO objects", e);
-                            return Mono.error(e);
-                        }
-                    });
-        }).subscribeOn(Schedulers.boundedElastic());
+        return listObjectsOlderThanFromBucket(days, bucket);
     }
 
     @Override
     public Mono<Void> delete(String path) {
-        return Mono.fromRunnable(() -> {
-            try {
-                minioClient.removeObject(
-                        RemoveObjectArgs.builder()
-                                .bucket(bucket)
-                                .object(path)
-                                .build()
-                );
-                log.info("Deleted expired MinIO object: {}", path);
-            } catch (Exception e) {
-                log.error("Error deleting MinIO object: {}", path, e);
-                throw new RuntimeException(e);
-            }
-        }).subscribeOn(Schedulers.boundedElastic()).then();
+        return deleteObjectFromBucket(path, bucket);
+    }
+
+    @Override
+    public Mono<String> uploadTempFile(byte[] content, String path) {
+        return uploadToBucket(content, path, tempBucket);
+    }
+
+    @Override
+    public Flux<String> listTempFilesOlderThan(int days) {
+        return listObjectsOlderThanFromBucket(days, tempBucket);
+    }
+
+    @Override
+    public Mono<Void> deleteTempFile(String path) {
+        return deleteObjectFromBucket(path, tempBucket);
     }
 }

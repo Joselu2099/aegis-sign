@@ -23,32 +23,32 @@ class StoragePurgeWorkerTest {
     private StoragePurgeWorker storagePurgeWorker;
 
     @Test
-    void purgeExpiredFiles_ShouldCallListAndDelete() {
+    void purgeExpiredFiles_ShouldCallListAndDeleteTempFiles() {
         // Given
         String path1 = "path/to/old/file1.png";
         String path2 = "path/to/old/file2.pdf";
-        when(storagePort.listOlderThan(7)).thenReturn(Flux.just(path1, path2));
-        when(storagePort.delete(anyString())).thenReturn(Mono.empty());
+        when(storagePort.listTempFilesOlderThan(7)).thenReturn(Flux.just(path1, path2));
+        when(storagePort.deleteTempFile(anyString())).thenReturn(Mono.empty());
 
         // When
         storagePurgeWorker.purgeExpiredFiles();
 
         // Then
-        verify(storagePort).listOlderThan(7);
-        verify(storagePort).delete(path1);
-        verify(storagePort).delete(path2);
+        verify(storagePort).listTempFilesOlderThan(7);
+        verify(storagePort).deleteTempFile(path1);
+        verify(storagePort).deleteTempFile(path2);
     }
 
     @Test
-    void purgeExpiredFiles_WhenEmpty_ShouldNotDelete() {
+    void purgeExpiredFiles_WhenEmpty_ShouldNotDeleteAnyTempFiles() {
         // Given
-        when(storagePort.listOlderThan(7)).thenReturn(Flux.empty());
+        when(storagePort.listTempFilesOlderThan(7)).thenReturn(Flux.empty());
 
         // When
         storagePurgeWorker.purgeExpiredFiles();
 
         // Then
-        verify(storagePort).listOlderThan(7);
-        verify(storagePort, never()).delete(anyString());
+        verify(storagePort).listTempFilesOlderThan(7);
+        verify(storagePort, never()).deleteTempFile(anyString());
     }
 }

@@ -43,7 +43,13 @@ minio:
   access-key: aegis_admin
   secret-key: aegis_admin_password
   bucket: aegis-sign
+  temp-bucket: aegis-sign-temp # New temporary bucket for biometric data
   encryption:
     enabled: true
     type: SSE-S3 # Server-Side Encryption with S3-Managed Keys
     # kms-key-id: "" # Optional for SSE-KMS
+
+storage:
+  purge:
+    retention-days: 7 # Retention period for temporary files in days
+    cron: 0 0 2 * * * # Daily at 2 AM
