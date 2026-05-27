@@ -88,6 +88,7 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
             case PENDING -> "CREATED";
             case APPROVED -> "APPROVED";
             case REJECTED -> "REJECTED";
+            default -> "CREATED"; // Default case for any other status
         };
     }
 
