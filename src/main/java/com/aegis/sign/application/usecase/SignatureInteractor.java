@@ -100,9 +100,9 @@ public class SignatureInteractor implements SignatureUseCase {
                     );
                     String templateName = "audit-trail-template"; // This template needs to exist
 
-                    return pdfTemplateCompiler.compile(templateName, data)
-                            .flatMap(unsignedPdf -> encryptionPort.signPdf(unsignedPdf))
-                            .flatMap(signedPdf -> storagePort.saveFile("audit-trails", contractId.toString() + "-audit-trail.pdf", signedPdf))
+                    return Mono.fromCallable(() -> pdfTemplateCompiler.compile(templateName, data))
+                            .flatMap(unsignedPdf -> signatureServicePort.signPdf(unsignedPdf))
+                            .flatMap(signedPdf -> storagePort.upload(signedPdf, "audit-trails/" + contractId.toString() + "-audit-trail.pdf"))
                             .thenReturn(new byte[0]); // Return empty byte array for now, or the actual PDF if needed
                 });
     }

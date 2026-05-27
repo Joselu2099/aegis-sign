@@ -46,18 +46,4 @@ public class SoftwareKeyStoreEncryptionAdapter implements EncryptionPort {
             return new String(decryptedBytes);
         });
     }
-
-    @Override
-    public Mono<byte[]> signPdf(byte[] pdfContent) {
-        // TODO: This is a placeholder implementation.
-        // For actual digital signing with an organization's root certificate,
-        // a proper PDF signing library and certificate management would be required.
-        // This current implementation merely encrypts the PDF content using the
-        // existing AES secret key, which is NOT a digital signature.
-        return Mono.fromCallable(() -> {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-            return cipher.doFinal(pdfContent);
-        });
-    }
 }

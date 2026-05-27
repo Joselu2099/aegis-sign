@@ -57,3 +57,14 @@ storage:
 tesseract:
   datapath: /usr/share/tesseract-ocr/5/tessdata
 
+keystore:
+  path: classpath:keystore.p12
+  password: changeit
+  alias: aegis-sign
+  key-password: changeit
+
+biometrics:
+  model-path: src/main/resources/models/face_embedding.onnx
+  match-threshold: 0.8
+  input-size: 112
+

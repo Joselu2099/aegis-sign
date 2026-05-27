@@ -41,9 +41,13 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
         try {
             Map<String, Object> data = new HashMap<>(session.getDocumentMetadata());
             data.put("signerId", session.getSignerId());
+            data.put("mrzValid", session.isMrzValid());
+            data.put("mrzValidationErrorMessage", session.getMrzValidationErrorMessage());
+            data.put("biometricValid", session.isBiometricValid());
+            data.put("biometricValidationErrorMessage", session.getBiometricValidationErrorMessage());
             extractedData = objectMapper.writeValueAsString(data);
         } catch (JsonProcessingException e) {
-            // Log error or throw runtime exception
+            // Log error
         }
 
         return KycSessionEntity.builder()
@@ -51,21 +55,36 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
                 .status(mapStatusToDb(session.getStatus()))
                 .extractedData(extractedData)
                 .biometricScore(session.getFaceMatchScore())
-                .expiresAt(OffsetDateTime.now().plusHours(1)) // Default expiration
+                .expiresAt(OffsetDateTime.now().plusHours(1))
                 .build();
     }
 
     private KycSession toDomain(KycSessionEntity entity) {
         Map<String, String> metadata = new HashMap<>();
         String signerId = null;
+        boolean mrzValid = false;
+        String mrzValidationErrorMessage = null;
+        boolean biometricValid = false;
+        String biometricValidationErrorMessage = null;
+
         if (entity.getExtractedData() != null) {
             try {
                 Map<String, Object> data = objectMapper.readValue(entity.getExtractedData(), new TypeReference<>() {});
                 for (Map.Entry<String, Object> entry : data.entrySet()) {
-                    if ("signerId".equals(entry.getKey())) {
-                        signerId = (String) entry.getValue();
+                    String key = entry.getKey();
+                    Object value = entry.getValue();
+                    if ("signerId".equals(key)) {
+                        signerId = (String) value;
+                    } else if ("mrzValid".equals(key)) {
+                        mrzValid = (Boolean) value;
+                    } else if ("mrzValidationErrorMessage".equals(key)) {
+                        mrzValidationErrorMessage = (String) value;
+                    } else if ("biometricValid".equals(key)) {
+                        biometricValid = (Boolean) value;
+                    } else if ("biometricValidationErrorMessage".equals(key)) {
+                        biometricValidationErrorMessage = (String) value;
                     } else {
-                        metadata.put(entry.getKey(), String.valueOf(entry.getValue()));
+                        metadata.put(key, String.valueOf(value));
                     }
                 }
             } catch (JsonProcessingException e) {
@@ -75,10 +94,14 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
 
         return KycSession.builder()
                 .id(entity.getId())
-                .status(mapStatusToDomain(entity.getStatus()))
+                .status(mapStatusToDomain(entity.getStatus(), mrzValid, biometricValid))
                 .documentMetadata(metadata)
                 .faceMatchScore(entity.getBiometricScore())
                 .signerId(signerId)
+                .mrzValid(mrzValid)
+                .mrzValidationErrorMessage(mrzValidationErrorMessage)
+                .biometricValid(biometricValid)
+                .biometricValidationErrorMessage(biometricValidationErrorMessage)
                 .build();
     }
 
@@ -88,15 +111,20 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
             case PENDING -> "CREATED";
             case APPROVED -> "APPROVED";
             case REJECTED -> "REJECTED";
-            default -> "CREATED"; // Default case for any other status
+            case MRZ_FAILED, BIOMETRIC_FAILED -> "FAILED";
         };
     }
 
-    private KycSession.KycStatus mapStatusToDomain(String status) {
+    private KycSession.KycStatus mapStatusToDomain(String status, boolean mrzValid, boolean biometricValid) {
         if (status == null) return KycSession.KycStatus.PENDING;
         return switch (status) {
             case "APPROVED" -> KycSession.KycStatus.APPROVED;
             case "REJECTED" -> KycSession.KycStatus.REJECTED;
+            case "FAILED" -> {
+                if (!mrzValid) yield KycSession.KycStatus.MRZ_FAILED;
+                if (!biometricValid) yield KycSession.KycStatus.BIOMETRIC_FAILED;
+                yield KycSession.KycStatus.REJECTED;
+            }
             default -> KycSession.KycStatus.PENDING;
         };
     }

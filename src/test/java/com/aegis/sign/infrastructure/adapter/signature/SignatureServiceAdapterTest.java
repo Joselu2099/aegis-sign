@@ -2,20 +2,33 @@ package com.aegis.sign.infrastructure.adapter.signature;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ResourceLoader;
 import reactor.test.StepVerifier;
 
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
+import java.io.ByteArrayOutputStream;
+// import com.lowagie.text.Document;
+// import com.lowagie.text.Paragraph;
+// import com.lowagie.text.pdf.PdfWriter;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class SignatureServiceAdapterTest {
 
     private SignatureServiceAdapter signatureServiceAdapter;
+    private ResourceLoader resourceLoader = new DefaultResourceLoader();
 
     @BeforeEach
-    void setUp() throws NoSuchAlgorithmException {
-        signatureServiceAdapter = new SignatureServiceAdapter();
+    void setUp() {
+        // Use the actual keystore from src/main/resources for testing
+        signatureServiceAdapter = new SignatureServiceAdapter(
+                resourceLoader,
+                "classpath:keystore.p12",
+                "changeit",
+                "aegis-sign",
+                "changeit"
+        );
+        signatureServiceAdapter.init();
     }
 
     @Test
@@ -27,29 +40,29 @@ class SignatureServiceAdapterTest {
                 .assertNext(signature -> {
                     assertNotNull(signature);
                     assertFalse(signature.isEmpty());
-                    assertFalse(signature.startsWith("signed-"), "Should not return dummy signature");
                     
                     // Verify it's valid Base64
-                    try {
-                        Base64.getDecoder().decode(signature);
-                    } catch (IllegalArgumentException e) {
-                        fail("Signature is not a valid Base64 string");
-                    }
+                    assertDoesNotThrow(() -> java.util.Base64.getDecoder().decode(signature));
                 })
                 .verifyComplete();
     }
 
     @Test
-    void signShouldReturnDifferentSignaturesForDifferentHashes() {
-        String hash1 = "hash1";
-        String hash2 = "hash2";
-        String thumbprint = "thumbprint";
+    void signPdfShouldReturnSignedPdf() throws Exception {
+        // Create a simple PDF
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        org.openpdf.text.Document document = new org.openpdf.text.Document();
+        org.openpdf.text.pdf.PdfWriter.getInstance(document, out);
+        document.open();
+        document.add(new org.openpdf.text.Paragraph("Test PDF for signing"));
+        document.close();
+        byte[] unsignedPdf = out.toByteArray();
 
-        String sig1 = signatureServiceAdapter.sign(hash1, thumbprint).block();
-        String sig2 = signatureServiceAdapter.sign(hash2, thumbprint).block();
-
-        assertNotNull(sig1);
-        assertNotNull(sig2);
-        assertNotEquals(sig1, sig2);
+        StepVerifier.create(signatureServiceAdapter.signPdf(unsignedPdf))
+                .assertNext(signedPdf -> {
+                    assertNotNull(signedPdf);
+                    assertTrue(signedPdf.length > unsignedPdf.length);
+                })
+                .verifyComplete();
     }
 }

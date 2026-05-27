@@ -4,6 +4,7 @@ import com.aegis.sign.application.ports.in.KycUseCase;
 import com.aegis.sign.domain.model.KycSession;
 import com.aegis.sign.domain.port.KycRepositoryPort;
 import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.service.BiometricValidationService;
 import com.aegis.sign.domain.service.MrzValidationService;
 import com.aegis.sign.domain.service.OcrExtractorService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class KycInteractor implements KycUseCase {
     private final StoragePort storagePort;
     private final OcrExtractorService ocrExtractorService;
     private final MrzValidationService mrzValidationService;
+    private final BiometricValidationService biometricValidationService;
 
     @Override
     public Mono<KycSession> createSession(String signerId) {
@@ -73,6 +75,22 @@ public class KycInteractor implements KycUseCase {
     public Mono<KycSession> submitBiometrics(UUID sessionId, byte[] content) {
         return kycRepositoryPort.findById(sessionId)
                 .flatMap(session -> {
+                    // 1. Perform biometric validation (quality, face detection, liveness)
+                    BiometricValidationService.ValidationResult validationResult = biometricValidationService.validate(content);
+                    
+                    session.setBiometricValid(validationResult.isValid());
+                    session.getDocumentMetadata().put("BIOMETRIC_CONTRAST", String.valueOf(validationResult.getContrast()));
+                    session.getDocumentMetadata().put("BIOMETRIC_WIDTH", String.valueOf(validationResult.getWidth()));
+                    session.getDocumentMetadata().put("BIOMETRIC_HEIGHT", String.valueOf(validationResult.getHeight()));
+                    session.getDocumentMetadata().put("LIVENESS_SCORE", String.valueOf(validationResult.getLivenessScore()));
+
+                    if (!validationResult.isValid()) {
+                        session.setBiometricValidationErrorMessage(validationResult.getErrorMessage());
+                        session.setStatus(KycSession.KycStatus.BIOMETRIC_FAILED);
+                        return kycRepositoryPort.save(session);
+                    }
+
+                    // 2. Upload to storage if valid
                     String biometricFilePath = "biometrics/" + sessionId.toString() + "/" + UUID.randomUUID().toString();
                     return storagePort.uploadTempFile(content, biometricFilePath)
                             .flatMap(path -> {
@@ -80,6 +98,10 @@ public class KycInteractor implements KycUseCase {
                                 return kycRepositoryPort.save(session);
                             });
                 });
+    }
+
+    private String validationMetadata(BiometricValidationService.ValidationResult result) {
+        return result.getHeight() + "x" + result.getWidth();
     }
 
     private boolean performMrzValidation(KycSession session, Map<String, String> ocrData) {

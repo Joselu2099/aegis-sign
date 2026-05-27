@@ -129,21 +129,21 @@ class SignatureInteractorTest {
         byte[] signedPdf = "signed_pdf_content".getBytes();
 
         when(auditTrailRepositoryPort.findByContractId(contractId)).thenReturn(Mono.just(auditTrail));
-        when(pdfTemplateCompiler.compile(anyString(), anyMap())).thenReturn(Mono.just(unsignedPdf));
-        when(encryptionPort.signPdf(unsignedPdf)).thenReturn(Mono.just(signedPdf));
-        when(storagePort.saveFile(anyString(), anyString(), any(byte[].class))).thenReturn(Mono.just("path/to/signed_pdf.pdf"));
+        when(pdfTemplateCompiler.compile(anyString(), anyMap())).thenReturn(unsignedPdf);
+        when(signatureServicePort.signPdf(unsignedPdf)).thenReturn(Mono.just(signedPdf));
+        when(storagePort.upload(eq(signedPdf), anyString())).thenReturn(Mono.just("path/to/signed_pdf.pdf"));
 
         // Act
         Mono<byte[]> result = signatureInteractor.generateAndSignAuditTrailPdf(contractId);
 
         // Assert
         StepVerifier.create(result)
-                .expectNext(new byte[0]) // Expecting empty byte array as per current implementation
+                .expectNextMatches(bytes -> bytes.length == 0) // Expecting empty byte array as per current implementation
                 .verifyComplete();
 
         verify(auditTrailRepositoryPort).findByContractId(contractId);
         verify(pdfTemplateCompiler).compile(eq("audit-trail-template"), anyMap());
-        verify(encryptionPort).signPdf(unsignedPdf);
-        verify(storagePort).saveFile(eq("audit-trails"), eq(contractId.toString() + "-audit-trail.pdf"), eq(signedPdf));
+        verify(signatureServicePort).signPdf(unsignedPdf);
+        verify(storagePort).upload(eq(signedPdf), contains(contractId.toString()));
     }
 }

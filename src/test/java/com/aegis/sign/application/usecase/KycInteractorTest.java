@@ -4,7 +4,8 @@ import com.aegis.sign.domain.model.KycSession;
 import com.aegis.sign.domain.port.KycRepositoryPort;
 import com.aegis.sign.domain.port.StoragePort;
 import com.aegis.sign.domain.service.MrzValidationService;
-import com.aegis.sign.domain.service.OcrExtractorService; // Import StoragePort
+import com.aegis.sign.domain.service.OcrExtractorService;
+import com.aegis.sign.domain.service.BiometricValidationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,12 +32,14 @@ class KycInteractorTest {
     private OcrExtractorService ocrExtractorService;
     @Mock
     private MrzValidationService mrzValidationService;
+    @Mock
+    private BiometricValidationService biometricValidationService;
 
     private KycInteractor kycInteractor;
 
     @BeforeEach
     void setUp() {
-        kycInteractor = new KycInteractor(kycRepositoryPort, storagePort, ocrExtractorService, mrzValidationService); // Inject all dependencies
+        kycInteractor = new KycInteractor(kycRepositoryPort, storagePort, ocrExtractorService, mrzValidationService, biometricValidationService); // Inject all dependencies
     }
 
     @Test

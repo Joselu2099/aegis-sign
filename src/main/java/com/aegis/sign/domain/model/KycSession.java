@@ -20,6 +20,8 @@ public class KycSession {
     private String signerId;
     private boolean mrzValid = false; // Default to false
     private String mrzValidationErrorMessage;
+    private boolean biometricValid = false;
+    private String biometricValidationErrorMessage;
 
     public void approve(Double score) {
         this.faceMatchScore = score;
@@ -31,6 +33,6 @@ public class KycSession {
     }
 
     public enum KycStatus {
-        PENDING, APPROVED, REJECTED, MRZ_FAILED
+        PENDING, APPROVED, REJECTED, MRZ_FAILED, BIOMETRIC_FAILED
     }
 }
