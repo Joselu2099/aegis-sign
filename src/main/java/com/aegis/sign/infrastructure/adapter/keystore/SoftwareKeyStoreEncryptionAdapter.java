@@ -7,7 +7,6 @@ import reactor.core.publisher.Mono;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
@@ -45,6 +44,20 @@ public class SoftwareKeyStoreEncryptionAdapter implements EncryptionPort {
             byte[] decodedBytes = Base64.getDecoder().decode(encryptedData);
             byte[] decryptedBytes = cipher.doFinal(decodedBytes);
             return new String(decryptedBytes);
+        });
+    }
+
+    @Override
+    public Mono<byte[]> signPdf(byte[] pdfContent) {
+        // TODO: This is a placeholder implementation.
+        // For actual digital signing with an organization's root certificate,
+        // a proper PDF signing library and certificate management would be required.
+        // This current implementation merely encrypts the PDF content using the
+        // existing AES secret key, which is NOT a digital signature.
+        return Mono.fromCallable(() -> {
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+            return cipher.doFinal(pdfContent);
         });
     }
 }

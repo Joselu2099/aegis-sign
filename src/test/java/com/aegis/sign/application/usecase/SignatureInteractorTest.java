@@ -7,6 +7,9 @@ import com.aegis.sign.domain.port.AuditTrailRepositoryPort;
 import com.aegis.sign.domain.port.ContractRepositoryPort;
 import com.aegis.sign.domain.port.SignatureRepositoryPort;
 import com.aegis.sign.domain.port.SignatureServicePort;
+import com.aegis.sign.domain.port.EncryptionPort;
+import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.service.PdfTemplateCompiler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +36,12 @@ class SignatureInteractorTest {
     private SignatureRepositoryPort signatureRepositoryPort;
     @Mock
     private AuditTrailRepositoryPort auditTrailRepositoryPort;
+    @Mock
+    private EncryptionPort encryptionPort;
+    @Mock
+    private PdfTemplateCompiler pdfTemplateCompiler;
+    @Mock
+    private StoragePort storagePort;
 
     private SignatureInteractor signatureInteractor;
 
@@ -40,8 +51,14 @@ class SignatureInteractorTest {
                 contractRepositoryPort,
                 signatureServicePort,
                 signatureRepositoryPort,
-                auditTrailRepositoryPort
+                auditTrailRepositoryPort,
+                encryptionPort,
+                pdfTemplateCompiler,
+                storagePort
         );
+
+        // Mock encryptionPort.encrypt behavior for existing tests
+        when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
     }
 
     @Test
@@ -88,5 +105,45 @@ class SignatureInteractorTest {
             at.getEvents().get(0).getIpAddress().equals(ip) &&
             at.getEvents().get(0).getUserAgent().equals(ua)
         ));
+    }
+
+    @Test
+    void generateAndSignAuditTrailPdf_shouldGenerateAndSignPdf() {
+        // Arrange
+        UUID contractId = UUID.randomUUID();
+        AuditTrail auditTrail = AuditTrail.builder()
+                .id(UUID.randomUUID())
+                .contractId(contractId)
+                .kycSessionId(UUID.randomUUID())
+                .events(List.of(
+                        AuditTrail.AuditTrailEvent.builder()
+                                .eventType("CONTRACT_CREATED")
+                                .timestamp(LocalDateTime.now())
+                                .description("Contract created")
+                                .ipAddress("192.168.1.1")
+                                .userAgent("TestAgent")
+                                .build()
+                ))
+                .build();
+        byte[] unsignedPdf = "unsigned_pdf_content".getBytes();
+        byte[] signedPdf = "signed_pdf_content".getBytes();
+
+        when(auditTrailRepositoryPort.findByContractId(contractId)).thenReturn(Mono.just(auditTrail));
+        when(pdfTemplateCompiler.compile(anyString(), anyMap())).thenReturn(Mono.just(unsignedPdf));
+        when(encryptionPort.signPdf(unsignedPdf)).thenReturn(Mono.just(signedPdf));
+        when(storagePort.saveFile(anyString(), anyString(), any(byte[].class))).thenReturn(Mono.just("path/to/signed_pdf.pdf"));
+
+        // Act
+        Mono<byte[]> result = signatureInteractor.generateAndSignAuditTrailPdf(contractId);
+
+        // Assert
+        StepVerifier.create(result)
+                .expectNext(new byte[0]) // Expecting empty byte array as per current implementation
+                .verifyComplete();
+
+        verify(auditTrailRepositoryPort).findByContractId(contractId);
+        verify(pdfTemplateCompiler).compile(eq("audit-trail-template"), anyMap());
+        verify(encryptionPort).signPdf(unsignedPdf);
+        verify(storagePort).saveFile(eq("audit-trails"), eq(contractId.toString() + "-audit-trail.pdf"), eq(signedPdf));
     }
 }

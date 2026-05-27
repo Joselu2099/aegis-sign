@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface AuditTrailRepositoryPort {
     Mono<AuditTrail> save(AuditTrail auditTrail);
     Mono<AuditTrail> findById(UUID id);
+    Mono<AuditTrail> findByContractId(UUID contractId);
 }
