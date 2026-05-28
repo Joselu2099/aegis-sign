@@ -56,13 +56,13 @@ class SignatureInteractorTest {
                 pdfTemplateCompiler,
                 storagePort
         );
-
-        // Mock encryptionPort.encrypt behavior for existing tests
-        when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
     }
 
     @Test
     void signContract_ShouldUpdateStatusAndCreateAuditTrail() {
+        // Mock encryptionPort.encrypt behavior for existing tests
+        when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
         // Arrange
         UUID contractId = UUID.randomUUID();
         UUID kycSessionId = UUID.randomUUID();

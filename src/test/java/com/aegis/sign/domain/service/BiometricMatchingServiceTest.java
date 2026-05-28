@@ -6,9 +6,18 @@ import reactor.test.StepVerifier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.springframework.test.util.ReflectionTestUtils;
+import org.junit.jupiter.api.BeforeEach;
+
 class BiometricMatchingServiceTest {
 
-    private final BiometricMatchingService biometricMatchingService = new BiometricMatchingService();
+    private BiometricMatchingService biometricMatchingService;
+
+    @BeforeEach
+    void setUp() {
+        biometricMatchingService = new BiometricMatchingService();
+        ReflectionTestUtils.setField(biometricMatchingService, "matchThreshold", 0.8);
+    }
 
     @Test
     void shouldMatchSameFaces() {
