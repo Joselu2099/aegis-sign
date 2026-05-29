@@ -56,6 +56,9 @@ class SignatureInteractorTest {
                 pdfTemplateCompiler,
                 storagePort
         );
+
+        // Mock encryptionPort.encrypt behavior for existing tests
+        lenient().when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
     }
 
     @Test

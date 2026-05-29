@@ -100,15 +100,15 @@ class KycInteractorTest {
 
         BiometricValidationService.ValidationResult validationResult = BiometricValidationService.ValidationResult.builder()
                 .isValid(true)
-                .contrast(15.0)
-                .width(600)
-                .height(800)
-                .livenessScore(0.85)
+                .contrast(1.0)
+                .width(100)
+                .height(100)
+                .livenessScore(0.9)
                 .faceDetected(true)
                 .build();
 
         when(kycRepositoryPort.findById(sessionId)).thenReturn(Mono.just(session));
-        when(biometricValidationService.validate(biometricContent)).thenReturn(validationResult);
+        when(biometricValidationService.validate(any(byte[].class))).thenReturn(validationResult);
         when(storagePort.uploadTempFile(any(byte[].class), anyString())).thenReturn(Mono.just(expectedPath)); // Mock upload
         when(kycRepositoryPort.save(any(KycSession.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 

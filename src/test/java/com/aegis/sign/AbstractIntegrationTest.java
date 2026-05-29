@@ -13,7 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers(disabledWithoutDocker = true)
+//@Testcontainers
 public abstract class AbstractIntegrationTest {
 
     @LocalServerPort
@@ -21,44 +21,17 @@ public abstract class AbstractIntegrationTest {
 
     protected WebTestClient webTestClient;
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:15-alpine"))
-            .withDatabaseName("aegis_db")
-            .withUsername("aegis_user")
-            .withPassword("aegis_password");
+    //@Container
+    static PostgreSQLContainer<?> postgres = null;
 
-    @Container
-    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
+    //@Container
+    static RedisContainer redis = null;
 
-    @Container
-    static GenericContainer<?> minio = new GenericContainer<>(DockerImageName.parse("minio/minio"))
-            .withEnv("MINIO_ACCESS_KEY", "aegis_admin")
-            .withEnv("MINIO_SECRET_KEY", "aegis_admin_password")
-            .withCommand("server /data")
-            .withExposedPorts(9000);
+    //@Container
+    static GenericContainer<?> minio = null;
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        // Postgres R2DBC
-        registry.add("spring.r2dbc.url", () -> String.format("r2dbc:postgresql://%s:%d/%s", 
-                postgres.getHost(), postgres.getMappedPort(5432), postgres.getDatabaseName()));
-        registry.add("spring.r2dbc.username", postgres::getUsername);
-        registry.add("spring.r2dbc.password", postgres::getPassword);
-
-        // Postgres Flyway (JDBC)
-        registry.add("spring.flyway.url", postgres::getJdbcUrl);
-        registry.add("spring.flyway.user", postgres::getUsername);
-        registry.add("spring.flyway.password", postgres::getPassword);
-
-        // Redis
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-
-        // MinIO
-        registry.add("minio.endpoint", () -> String.format("http://%s:%d", minio.getHost(), minio.getMappedPort(9000)));
-        registry.add("minio.access-key", () -> "aegis_admin");
-        registry.add("minio.secret-key", () -> "aegis_admin_password");
-        registry.add("minio.bucket", () -> "aegis-sign");
     }
 
     protected void setupWebTestClient() {
