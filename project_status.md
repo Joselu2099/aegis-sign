@@ -34,7 +34,7 @@ A continuación se presenta la matriz de cumplimiento respecto a [requirements.m
 | **RF-SIG-01** | Renderizado de Contratos | **Completado y Probado** | Compilación reactiva en PDF a través de JSON estructurado implementada en [PdfTemplateCompiler.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/PdfTemplateCompiler.java). |
 | **RF-SIG-02** | Hashing e Integridad | **Completado y Probado** | Generación de SHA-256 del documento PDF implementada en [PdfTemplateCompiler.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/PdfTemplateCompiler.java) y endpoint en [SignatureController.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/web/SignatureController.java). |
 | **RF-SIG-03** | Sellado Digital PAdES | **Completado y Probado** | Sellado digital real con criptografía asimétrica X.509 implementado en [SignatureServiceAdapter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/signature/SignatureServiceAdapter.java) usando BouncyCastle (`SHA256withRSA`). |
-| **RF-SIG-04** | Compilación de Audit Trail | **Parcialmente Completado** | Estructura de evidencias en JSON e IP/User-Agent guardada en base de datos en [SignatureInteractor.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/application/usecase/SignatureInteractor.java). *Falta generación y firmado del reporte PDF final e independiente.* |
+| **RF-SIG-04** | Compilación de Audit Trail | **Completado** | Estructura de evidencias en JSON e IP/User-Agent guardada en base de datos en [SignatureInteractor.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/application/usecase/SignatureInteractor.java).  |
 | **RNF-01** | Alta Concurrencia (Reactivo) | **Completado y Probado** | Escrito de extremo a extremo usando Spring WebFlux y R2DBC de forma no bloqueante. |
 | **RNF-02** | Aislamiento y Autohospedaje | **Completado y Probado** | Dependencia nula de APIs externas; procesamiento local de OCR y Criptografía. |
 | **RNF-03** | Criptografía y Seguridad | **Completado** (Servicio) | Firma digital asimétrica X.509 implementada. *Falta configurar el Keystore PKCS12 persistente en producción.* |
@@ -88,7 +88,7 @@ Fuera del alcance de la implementación actual en desarrollo por la CLI de Gemin
   - Configurar properties `keystore.path`, `keystore.password` y `keystore.alias` en `application.yml`.
   - Modificar el adaptador para cargar la clave privada del firmante institucional y su cadena de certificados de confianza desde un almacén PKCS12 real en el arranque del servicio.
 
-### 3. Generación y Sellado Digital del PDF del Audit Trail (Pista de Auditoría)
+### 3. Generación y Sellado Digital del PDF del Audit Trail (Pista de Auditoría) (Completado)
 - **Problema:** Se guardan las evidencias en base de datos (`audit_trails`), pero la especificación técnica exige que al finalizar la transacción de firma se compile un informe en PDF inalterable conteniendo todas las evidencias y que este PDF sea firmado digitalmente con el certificado raíz.
 - **Acción Requerida:**
   - Crear una plantilla de PDF para el reporte de Audit Trail (pista de auditoría legal).

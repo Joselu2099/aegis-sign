@@ -58,7 +58,7 @@ class SignatureInteractorTest {
         );
 
         // Mock encryptionPort.encrypt behavior for existing tests
-        when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        lenient().when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
     }
 
     @Test
