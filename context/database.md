@@ -61,7 +61,7 @@ erDiagram
     - `audit_trails.contract_id` -> `contracts.id` (One-to-One, Cascade On Delete).
     - `audit_trails.kyc_session_id` -> `kyc_sessions.id` (Many-to-One, Cascade On Delete).
 - **Logic in DB/Storage**: Use of `jsonb` in PostgreSQL for flexible but queryable properties:
-    - `kyc_sessions.extracted_data`: Holds parsed identity data (e.g. name, MRZ, birth date).
+    - `kyc_sessions.extracted_data`: Holds parsed identity data, including `mrzValid` (boolean), `mrzValidationErrorMessage`, `biometricValid`, and detailed OCR fields.
     - `signatures.signer_info`: Holds signer metadata (e.g. signer ID, IP, user-agent).
     - `audit_trails.trail_manifest`: Holds the complete log of cryptographic events and verification scores.
 - **Identity Generation**: UUIDs (v4) for all primary keys.

@@ -34,28 +34,35 @@ classDiagram
 
 ## Complex Functional Flows
 ### KYC Lifecycle
-- **Starting Point**: Consumer application initiates a new KYC session for a signer via `/api/v1/kyc/session?signerId={signerId}`.
+- **Starting Point**: Consumer application initiates a new KYC session for a signer via `/api/v1/kyc/sessions?signerId={signerId}`.
 - **Transformation Steps**: 
-    1. Upload Identity Document (OCR extraction and validation).
-    2. Upload Selfie (Biometric comparison score computed against identity document photo).
-    3. Session verified and approved if biometric score meets threshold.
-- **Ending Point**: Session marked as `APPROVED` or `REJECTED`.
+    1. **Upload Identity Document**: 
+        - Local OCR extraction using **Tess4j (Tesseract)**.
+        - **MRZ Validation**: Checksum calculation (ICAO Doc 9303) for Document Number, DOB, Expiry, and Composite fields (TD1, TD2, TD3).
+        - Status set to `MRZ_FAILED` if checksums do not match.
+    2. **Upload Biometrics**: 
+        - Quality analysis (contrast, resolution) and face detection.
+        - Liveness check (mocked logic for frames analysis).
+        - Storage of biometric data in temporary MinIO bucket.
+    3. **Session Verification**: 
+        - Manual or automated final approval.
+- **Ending Point**: Session marked as `APPROVED`, `REJECTED`, `MRZ_FAILED`, or `BIOMETRIC_FAILED`.
 
 ### Contract Preparation & Hashing
-- **Starting Point**: A contract has been populated and saved to the database (e.g. from an upstream contract builder).
+- **Starting Point**: A contract has been populated and saved to the database.
 - **Transformation Steps**:
     1. API consumer calls `/api/v1/signatures/prepare?contractId={contractId}`.
-    2. System fetches the contract and returns its content hash (SHA-256) pre-signature.
+    2. System calculates the **SHA-256 hash** of the PDF content.
 - **Ending Point**: Contract prepared and hash returned to the client.
 
 ### Signature & Consent
-- **Starting Point**: User invokes `/api/v1/signatures/sign` with `SignRequest` (JSON containing `contractId`, `kycSessionId`, `signerId`, and `certificateThumbprint`).
+- **Starting Point**: User invokes `/api/v1/signatures/sign` with `SignRequest`.
 - **Transformation Steps**:
-    1. Retrieve the prepared contract by ID.
-    2. Verify signer has an approved KYC session matching the signer ID.
-    3. Apply digital signature using the X.509 certificate.
-    4. Compile the audit trail (events including IP Address, User-Agent, and timestamps).
-    5. Save the signature and audit trail, and set contract status to `SIGNED`.
+    1. Retrieve the prepared contract and verify its hash.
+    2. Verify signer has an `APPROVED` KYC session.
+    3. Apply **Advanced Electronic Signature (FEA)** using **X.509** certificate (`SHA256withRSA`).
+    4. Records the encrypted certificate thumbprint for traceability.
+    5. Compile the **Audit Trail** record in the database.
 - **Ending Point**: Contract status updated to `SIGNED` and Signature object returned.
 
 ---

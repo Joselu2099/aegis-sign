@@ -19,10 +19,6 @@ class BiometricMatchingServiceTest {
         ReflectionTestUtils.setField(biometricMatchingService, "matchThreshold", 0.8);
     }
 
-    BiometricMatchingServiceTest() {
-        org.springframework.test.util.ReflectionTestUtils.setField(biometricMatchingService, "matchThreshold", 0.8);
-    }
-
     @Test
     void shouldMatchSameFaces() {
         byte[] face1 = new byte[1000];

@@ -45,15 +45,15 @@ graph TD
 
 ## System Integration Points
 - **Internal Modules**: 
-    - **KYC Module**: Handles document upload and identity verification session lifecycle.
-    - **Signature Module**: Manages pre-signature hashing, PAdES-compliant digital signing (simulated), and audit trail consolidation.
-    - **Template Compilation**: Compiles JSON templates containing text elements/variables into PDF documents using OpenPDF (packaged in `PdfTemplateCompiler`).
+    - **KYC Module**: Handles document upload, local OCR processing with **Tess4j**, MRZ validation, and biometric verification.
+    - **Signature Module**: Manages SHA-256 hashing, **X.509** digital sealing with **BouncyCastle**, and audit trail consolidation.
+    - **Template Compilation**: Compiles JSON data into PDF documents using OpenPDF.
+    - **GDPR Purge Worker**: Scheduled component (`StoragePurgeWorker`) that automatically deletes expired temporary files from MinIO.
 - **External Services (Infrastructure Adapters)**:
-    - **PostgreSQL (R2DBC)**: Reactive storage for `kyc_sessions`, `contracts`, `signatures`, and `audit_trails`.
-    - **Redis**: Reactive cache client setup and configured (though the rate-limiter currently operates in-memory).
-    - **MinIO (S3 API)**: Object storage for input documents and generated PDFs, leveraging elastic scheduler for non-blocking operations.
-    - **OCR & Biometrics Services**: Encapsulated within the domain layer as OCR MRZ validators and Biometric Matchers with standard checking algorithms and localized mock-engines.
-    - **PKI Adapter**: Interfaces with internal certificate management to verify and apply digital signatures.
+    - **PostgreSQL (R2DBC)**: Reactive storage for sessions, contracts, and signatures.
+    - **Redis**: Reactive rate limiting (Lua script) and session cache.
+    - **MinIO (S3 API)**: Object storage for raw documents and final signed PDFs.
+    - **PKI Adapter**: Interfaces with KeyStores to apply cryptographic signatures.
 
 ---
 

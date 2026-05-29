@@ -234,7 +234,7 @@ Aplica la firma digital PAdES (X.509) sobre el contrato e inhabilita cambios pos
       "id": "c1c1f4e3-883c-41fb-89c0-5eb4e6e690e5",
       "contractId": "b2b1a3e8-5421-4fcd-bc39-a9a38f3214a1",
       "signerId": "signer123",
-      "hash": "signed-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-5e883e29f8f3c87e74888d3e29f8f3c8",
+      "hash": "MIIEvwYJKoZIhvcNAQcCoIIEsDCCBKwCAQEx...",
       "certificateThumbprint": "5e883e29f8f3c87e74888d3e29f8f3c8",
       "timestamp": "2026-05-23T19:50:20"
     },

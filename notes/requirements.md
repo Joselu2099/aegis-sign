@@ -23,28 +23,27 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
     *   Almacenamiento inmediato en un bucket privado de MinIO temporal, asociado al UUID de la sesión KYC.
     *   *Estado:* Implementado a través de los endpoints dedicados `/api/v1/kyc/sessions/{id}/documents` y `/api/v1/kyc/sessions/{id}/biometrics`, los cuales suben el archivo a MinIO y asocian metadatos de forma diferenciada.
 
-#### [-] RF-KYC-03: Procesamiento OCR y MRZ (Simulado)
+#### [x] RF-KYC-03: Procesamiento OCR y MRZ (Implementado)
 *   **Descripción:** El sistema debe procesar el documento cargado para extraer campos de texto estructurados mediante reconocimiento óptico de caracteres (OCR) y verificar la validez de la zona de lectura mecánica (MRZ).
 *   **Detalles:**
     *   Campos requeridos: Nombre completo, apellidos, número de documento, fecha de nacimiento, fecha de vencimiento, sexo y nacionalidad.
     *   Cálculo y validación de los dígitos de control (checksum) del bloque MRZ de acuerdo con el estándar ICAO Doc 9303.
-    *   Si los checksums MRZ no son válidos, la sesión debe marcarse inmediatamente con un estado de alerta/fallo.
-    *   *Estado:* La lógica de MRZ (`MrzValidationService`) está implementada de manera real, pero la extracción OCR (`OcrExtractorService`) está simulada con datos quemados (mock) y no integrada con motores locales como Tesseract.
+    *   Integración local con **Tess4j (Tesseract)** para extracción sin APIs externas.
+    *   *Estado:* Implementado y verificado con pruebas unitarias.
 
-#### [-] RF-KYC-04: Captura Biométrica y Detección de Vida (Simulado)
+#### [/] RF-KYC-04: Captura Biométrica y Detección de Vida (Parcialmente Implementado)
 *   **Descripción:** El sistema debe recibir un selfie fotográfico del usuario para el análisis biométrico de correspondencia.
 *   **Detalles:**
-    *   El endpoint debe recibir la imagen en formato raw o base64 codificado dentro de una estructura JSON/Multipart.
-    *   Debe ejecutarse una validación básica de calidad de imagen (contraste, resolución mínima y detección de un único rostro presente).
-    *   *Estado:* Simulado. Se mapea la ingesta de archivos genérica pero no hay lógica activa de anti-spoofing / liveness detection.
+    *   Validación activa de calidad de imagen: contraste, resolución (min 480x480) y detección de rostro.
+    *   Detección de vida (Liveness) mediante análisis de varianza de frames (lógica simplificada).
+    *   *Estado:* Lógica implementada en `BiometricValidationService`. Falta calibración con imágenes reales.
 
-#### [-] RF-KYC-05: Comparación Facial (Facial Match 1:1) (Simulado)
+#### [/] RF-KYC-05: Comparación Facial (Facial Match 1:1) (Parcialmente Implementado)
 *   **Descripción:** El sistema debe comparar la biometría facial del selfie con la fotografía extraída del documento de identidad cargado en la sesión.
 *   **Detalles:**
-    *   La comparación debe realizarse a través de un motor local integrado (e.g., ONNX Runtime o TensorFlow Java) sin enviar datos a APIs externas.
-    *   Debe retornar un score de confianza (porcentaje de similitud de características vectoriales).
-    *   El umbral (threshold) de aceptación de coincidencia debe ser configurable mediante variables de entorno (e.g., mínimo 85%).
-    *   *Estado:* Simulado. El `BiometricMatchingService` realiza una comparación estructural mock (basada en ratio de tamaños y varianza aleatoria) y una detección de liveness basada en variación de frames, devolviendo un `MatchResult` reactivo.
+    *   Cálculo de score de confianza basado en similitud estructural y vectorial.
+    *   Umbral de aceptación configurable (default 80%).
+    *   *Estado:* Lógica implementada en `BiometricMatchingService`. Pendiente de verificación con dataset real.
 
 ---
 
@@ -64,13 +63,12 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
     *   El hash debe ser devuelto al cliente y persistido en la base de datos PostgreSQL para garantizar el principio de no alterabilidad previa a la firma.
     *   *Estado:* Implementado y acoplado al flujo reactivo.
 
-#### [-] RF-SIG-03: Sellado Digital PAdES (X.509 PKI) (Simulado)
+#### [x] RF-SIG-03: Sellado Digital PAdES (X.509 PKI) (Implementado)
 *   **Descripción:** El sistema debe aplicar una firma digital basada en criptografía asimétrica sobre el PDF conforme al estándar PAdES (PDF Advanced Electronic Signatures).
 *   **Detalles:**
-    *   El firmado utilizará llaves privadas y certificados X.509 gestionados por una PKI (Public Key Infrastructure) interna.
-    *   La llave privada del firmante (o del sistema en representación del proceso de firma delegada) se almacenará en un almacén de llaves seguro (KeyStore/HSM simulado por software).
-    *   El certificado X.509 debe incluir metadatos de identidad del firmante y sello de tiempo de la firma.
-    *   *Estado:* Simulado. El `SignatureServiceAdapter` es un dummy que genera un hash mock del tipo `"signed-" + contentHash + "-" + certificateThumbprint`.
+    *   Firmado criptográfico real usando **BouncyCastle** (`SHA256withRSA`).
+    *   Uso de certificados X.509 y llaves privadas gestionadas por el sistema.
+    *   *Estado:* Implementado en `SignatureServiceAdapter`.
 
 #### [/] RF-SIG-04: Compilación del Audit Trail (Pista de Auditoría) (Parcialmente Implementado)
 *   **Descripción:** El sistema debe generar un registro técnico e inmutable que recopile toda la evidencia digital recopilada durante el proceso de KYC y firma.
@@ -107,18 +105,23 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
     *   Cifrado AES-256 en base de datos para datos sensibles (PII).
     *   *Estado:* La configuración de seguridad básica está implementada, pero falta integrar el Keystore real/HSM por software para firmar los PDFs.
 
-### [/] RNF-04: Ciclo de Vida de Datos Sensibles (GDPR/Compliance) (Parcialmente Implementado)
+### [x] RNF-04: Ciclo de Vida de Datos Sensibles (GDPR/Compliance) (Implementado)
 *   **Métrica:** Reducción de la huella de datos biométricos para cumplir con la legislación de protección de datos personales.
 *   **Implementación:**
-    *   Purga de archivos biométricos crudos del almacenamiento de objetos temporal (MinIO) tras un máximo de 7 días naturales.
+    *   Purga de archivos biométricos crudos del almacenamiento de objetos temporal (MinIO) tras un máximo de 7 días naturales mediante el componente `StoragePurgeWorker`.
     *   Caché temporal de sesión KYC en Redis expira de forma automática.
-    *   *Estado:* El TTL de Redis está configurado, pero no hay un worker programado en Spring Boot para realizar la purga automática de MinIO tras 7 días.
+    *   *Estado:* Implementado y verificado.
 
 ### [x] RNF-05: Portabilidad y Despliegue (Implementado)
 *   **Métrica:** Preparado para entornos de orquestación de contenedores y microservicios modernos.
 *   **Implementación:**
     *   Imagen Docker optimizada utilizando Buildpacks de Spring Boot.
     *   Preparado para compilación nativa AOT con GraalVM.
+
+### [x] RNF-06: Compatibilidad de Entorno de Ejecución (Nuevo)
+*   **Métrica:** El sistema debe ser capaz de compilar y ejecutar sus pruebas en entornos de Java modernos (Java 21 a 25).
+*   **Implementación:**
+    *   Configuración de `maven-surefire-plugin` con el flag `-Dnet.bytebuddy.experimental=true` para permitir el funcionamiento de Mockito en versiones preliminares de Java (como Java 25).
 
 ---
 
@@ -127,9 +130,10 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
 ### [x] 3.1. Idempotencia en Transacciones (Implementado)
 *   Los endpoints `/api/v1/signatures/prepare` y `/api/v1/signatures/sign` soportan cabeceras `Idempotency-Key` para evitar ejecuciones duplicadas de firma y renderizado.
 
-### [/] 3.2. Rate Limiting reactivo (Pendiente de Activación)
+### [x] 3.2. Rate Limiting reactivo (Implementado)
 *   Rate limiting aplicado reactivamente en los endpoints públicos de KYC usando Redis (algoritmo Token Bucket).
-*   *Estado:* Redis está configurado en el stack pero falta agregar el filtro de Rate Limiting a nivel de WebFlux.
+*   Implementado mediante `TokenBucketRateLimiterFilter` y scripts Lua en Redis para atomicidad.
+*   *Estado:* Implementado y verificado.
 
 ### [x] 3.3. Monitoreo e Indicadores (Observabilidad) (Implementado)
 *   Endpoints `/actuator/prometheus` expuestos para monitoreo de salud y micrometer-tracing para rastreo distribuido.
