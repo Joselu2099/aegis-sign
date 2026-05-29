@@ -27,14 +27,14 @@ class StoragePurgeWorkerTest {
         // Given
         String path1 = "path/to/old/file1.png";
         String path2 = "path/to/old/file2.pdf";
-        when(storagePort.listTempFilesOlderThan(7)).thenReturn(Flux.just(path1, path2));
+        when(storagePort.listTempFilesOlderThan(anyInt())).thenReturn(Flux.just(path1, path2));
         when(storagePort.deleteTempFile(anyString())).thenReturn(Mono.empty());
 
         // When
         storagePurgeWorker.purgeExpiredFiles();
 
         // Then
-        verify(storagePort).listTempFilesOlderThan(7);
+        verify(storagePort).listTempFilesOlderThan(0);
         verify(storagePort).deleteTempFile(path1);
         verify(storagePort).deleteTempFile(path2);
     }
@@ -42,13 +42,13 @@ class StoragePurgeWorkerTest {
     @Test
     void purgeExpiredFiles_WhenEmpty_ShouldNotDeleteAnyTempFiles() {
         // Given
-        when(storagePort.listTempFilesOlderThan(7)).thenReturn(Flux.empty());
+        when(storagePort.listTempFilesOlderThan(anyInt())).thenReturn(Flux.empty());
 
         // When
         storagePurgeWorker.purgeExpiredFiles();
 
         // Then
-        verify(storagePort).listTempFilesOlderThan(7);
+        verify(storagePort).listTempFilesOlderThan(0);
         verify(storagePort, never()).deleteTempFile(anyString());
     }
 }

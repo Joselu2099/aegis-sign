@@ -8,7 +8,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BiometricMatchingServiceTest {
 
-    private final BiometricMatchingService biometricMatchingService = new BiometricMatchingService();
+    private final BiometricMatchingService biometricMatchingService;
+
+    public BiometricMatchingServiceTest() {
+        biometricMatchingService = new BiometricMatchingService();
+        // Set the matchThreshold using reflection or by creating a setter (since it's not initialized by Spring here)
+        try {
+            java.lang.reflect.Field field = BiometricMatchingService.class.getDeclaredField("matchThreshold");
+            field.setAccessible(true);
+            field.set(biometricMatchingService, 0.8);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Test
     void shouldMatchSameFaces() {
@@ -28,7 +40,7 @@ class BiometricMatchingServiceTest {
     @Test
     void shouldNotMatchDifferentFaces() {
         byte[] face1 = new byte[1000];
-        byte[] face2 = new byte[500]; // Different length, ratio 0.5
+        byte[] face2 = new byte[500]; // Different length, ratio 0.5. With variance, max is 0.55. Threshold is 0.8.
 
         biometricMatchingService.match(face1, face2)
                 .as(StepVerifier::create)

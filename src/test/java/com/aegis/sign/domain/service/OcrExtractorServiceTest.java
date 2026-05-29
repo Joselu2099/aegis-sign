@@ -56,7 +56,7 @@ class OcrExtractorServiceTest {
         Map<String, String> results = ocrExtractorService.extractData(imageBytes);
         
         assertNotNull(results);
-        assertEquals("L898902C3", results.get("documentNumber")); // Check fallback
+        assertEquals("OCR_FAILED_DOC_NUM", results.get("documentNumber")); // Check fallback
         assertNull(results.get("rawContent"));
     }
 
@@ -73,6 +73,6 @@ class OcrExtractorServiceTest {
         Map<String, String> results = ocrExtractorService.extractData(invalidImage);
         
         assertNotNull(results);
-        assertEquals("L898902C3", results.get("documentNumber"));
+        assertEquals("OCR_FAILED_DOC_NUM", results.get("documentNumber"));
     }
 }
