@@ -63,6 +63,8 @@ public class KycInteractor implements KycUseCase {
                             session.setMrzValidationErrorMessage("MRZ validation failed due to an unknown error.");
                         }
                         session.setStatus(KycSession.KycStatus.MRZ_FAILED); // Set status to MRZ_FAILED
+                        return kycRepositoryPort.save(session)
+                                .flatMap(savedSession -> Mono.error(new com.aegis.sign.domain.exception.KycUserException("Unreadable MRZ: " + session.getMrzValidationErrorMessage(), "UNREADABLE_MRZ")));
                     }
 
                     // Specific logic for ID document ingestion
@@ -87,7 +89,8 @@ public class KycInteractor implements KycUseCase {
                     if (!validationResult.isValid()) {
                         session.setBiometricValidationErrorMessage(validationResult.getErrorMessage());
                         session.setStatus(KycSession.KycStatus.BIOMETRIC_FAILED);
-                        return kycRepositoryPort.save(session);
+                        return kycRepositoryPort.save(session)
+                                .flatMap(savedSession -> Mono.error(new com.aegis.sign.domain.exception.KycUserException(validationResult.getErrorMessage(), validationResult.getErrorCode() != null ? validationResult.getErrorCode() : "BIOMETRIC_VALIDATION_FAILED")));
                     }
 
                     // 2. Upload to storage if valid

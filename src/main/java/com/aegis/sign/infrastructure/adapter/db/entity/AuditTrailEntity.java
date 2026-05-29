@@ -1,10 +1,12 @@
 package com.aegis.sign.infrastructure.adapter.db.entity;
 
+import io.r2dbc.postgresql.codec.Json;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.util.UUID;
@@ -14,11 +16,16 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("audit_trails")
-public class AuditTrailEntity {
+public class AuditTrailEntity implements Persistable<UUID> {
     @Id
     private UUID id;
     private UUID contractId;
     private UUID kycSessionId;
-    private String trailManifest; // JSONB
+    private Json trailManifest; // JSONB
     private String finalSignedPdfUri;
+
+    @Override
+    public boolean isNew() {
+        return true; // Audit trails are immutable
+    }
 }

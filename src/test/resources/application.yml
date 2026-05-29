@@ -8,12 +8,13 @@ spring:
   application:
     name: aegis-sign
   config:
-    import: "vault://"
+    import: ""
   cloud:
     vault:
       uri: ${VAULT_URI:http://127.0.0.1:8200}
       token: ${VAULT_TOKEN}
-      fail-fast: true
+      enabled: false
+      fail-fast: false
       kv:
         enabled: true
         backend: secret
@@ -85,24 +86,3 @@ biometrics:
   model-path: src/main/resources/models/face_embedding.onnx
   match-threshold: 0.8
   input-size: 112
-
-# ===================================================================
-# Observability: Actuator, Metrics, and Tracing
-# ===================================================================
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  metrics:
-    tags:
-      application: ${spring.application.name}
-    enable:
-      r2dbc: true # Expose R2DBC pool metrics
-      lettuce: true # Expose Redis pool metrics
-  tracing:
-    sampling:
-      probability: 1.0 # 100% sampling for demo/dev, adjust for production
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9411/api/v2/spans

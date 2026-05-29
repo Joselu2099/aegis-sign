@@ -15,12 +15,31 @@
 	<description>Self-hosted Identity Verification and Electronic Signature Service</description>
 	<properties>
 		<java.version>21</java.version>
+		<spring-cloud.version>2023.0.1</spring-cloud.version>
 		<springdoc.version>2.5.0</springdoc.version>
 		<testcontainers.version>1.19.7</testcontainers.version>
 		<archunit.version>1.2.1</archunit.version>
 	</properties>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
+		<!-- Spring Cloud Vault -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-vault-config</artifactId>
+		</dependency>
+
 		<!-- WebFlux -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -40,7 +59,6 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>r2dbc-postgresql</artifactId>
-			<scope>runtime</scope>
 		</dependency>
 
 		<!-- Redis Reactive -->
@@ -66,6 +84,25 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- Observability: Micrometer & Tracing -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-brave</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.reporter2</groupId>
+			<artifactId>zipkin-reporter-brave</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
 		</dependency>
 
 		<!-- Utilities -->
@@ -192,4 +229,38 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>integration-tests</id>
+			<properties>
+				<testcontainers.disabled>true</testcontainers.disabled>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<systemPropertyVariables>
+								<testcontainers.disabled>true</testcontainers.disabled>
+								<spring.r2dbc.url>r2dbc:postgresql://localhost:5432/aegis_db</spring.r2dbc.url>
+								<spring.r2dbc.username>aegis_user</spring.r2dbc.username>
+								<spring.r2dbc.password>aegis_password</spring.r2dbc.password>
+								<spring.flyway.url>jdbc:postgresql://localhost:5432/aegis_db</spring.flyway.url>
+								<spring.flyway.user>aegis_user</spring.flyway.user>
+								<spring.flyway.password>aegis_password</spring.flyway.password>
+								<spring.data.redis.host>localhost</spring.data.redis.host>
+								<spring.data.redis.port>6379</spring.data.redis.port>
+								<minio.endpoint>http://localhost:9000</minio.endpoint>
+								<minio.access-key>aegis_admin</minio.access-key>
+								<minio.secret-key>aegis_admin_password</minio.secret-key>
+							</systemPropertyVariables>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

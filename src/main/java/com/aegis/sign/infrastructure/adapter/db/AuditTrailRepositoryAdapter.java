@@ -53,14 +53,16 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
                 .id(auditTrail.getId())
                 .contractId(auditTrail.getContractId())
                 .kycSessionId(auditTrail.getKycSessionId())
-                .trailManifest(manifest)
+                .trailManifest(io.r2dbc.postgresql.codec.Json.of(manifest))
                 .build();
     }
 
     private AuditTrail toDomain(AuditTrailEntity entity) {
         List<AuditTrail.AuditTrailEvent> events = Collections.emptyList();
         try {
-            events = objectMapper.readValue(entity.getTrailManifest(), new TypeReference<List<AuditTrail.AuditTrailEvent>>() {});
+            if (entity.getTrailManifest() != null) {
+                events = objectMapper.readValue(entity.getTrailManifest().asString(), new TypeReference<List<AuditTrail.AuditTrailEvent>>() {});
+            }
         } catch (JsonProcessingException e) {
             // handle
             System.err.println("Error deserializing audit trail events: " + e.getMessage());

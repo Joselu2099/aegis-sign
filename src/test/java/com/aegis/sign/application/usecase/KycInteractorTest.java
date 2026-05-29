@@ -15,6 +15,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -74,8 +75,22 @@ class KycInteractorTest {
                 .documentMetadata(new HashMap<>())
                 .build();
 
+        Map<String, String> mockOcrData = new HashMap<>();
+        mockOcrData.put("mrzType", "TD3");
+        mockOcrData.put("documentNumber", "123");
+        mockOcrData.put("documentNumberCheckDigit", "1");
+        mockOcrData.put("birthDate", "900101");
+        mockOcrData.put("birthDateCheckDigit", "1");
+        mockOcrData.put("expiryDate", "300101");
+        mockOcrData.put("expiryDateCheckDigit", "1");
+        mockOcrData.put("mrzLine1", "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<");
+        mockOcrData.put("mrzLine2", "L898902C<3UTO8001015F2405236<<<<<<<<<<<<<<0");
+        mockOcrData.put("compositeCheckDigit", "0");
+
         when(kycRepositoryPort.findById(sessionId)).thenReturn(Mono.just(session));
         when(kycRepositoryPort.save(any(KycSession.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        when(ocrExtractorService.extractData(any(byte[].class))).thenReturn(mockOcrData);
+        when(mrzValidationService.validateChecksum(anyString(), anyChar())).thenReturn(true);
 
         // Act
         Mono<KycSession> result = kycInteractor.submitIdDocument(sessionId, new byte[]{1, 2, 3});

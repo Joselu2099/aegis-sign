@@ -1,6 +1,8 @@
 package com.aegis.sign.infrastructure.adapter.signature;
 
 import com.aegis.sign.domain.port.SignatureServicePort;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ import java.util.Base64;
 public class SignatureServiceAdapter implements SignatureServicePort {
 
     private final ResourceLoader resourceLoader;
+    private final ObservationRegistry observationRegistry;
     private final String keystorePath;
     private final String keystorePassword;
     private final String keyAlias;
@@ -40,11 +43,13 @@ public class SignatureServiceAdapter implements SignatureServicePort {
 
     public SignatureServiceAdapter(
             ResourceLoader resourceLoader,
+            ObservationRegistry observationRegistry,
             @Value("${keystore.path}") String keystorePath,
             @Value("${keystore.password}") String keystorePassword,
             @Value("${keystore.alias}") String keyAlias,
             @Value("${keystore.key-password}") String keyPassword) {
         this.resourceLoader = resourceLoader;
+        this.observationRegistry = observationRegistry;
         this.keystorePath = keystorePath;
         this.keystorePassword = keystorePassword;
         this.keyAlias = keyAlias;
@@ -73,38 +78,60 @@ public class SignatureServiceAdapter implements SignatureServicePort {
 
     @Override
     public Mono<String> sign(String contentHash, String certificateThumbprint) {
-        return Mono.fromCallable(() -> {
-            Signature signature = Signature.getInstance("SHA256withRSA", BouncyCastleProvider.PROVIDER_NAME);
-            signature.initSign(privateKey);
-            signature.update(contentHash.getBytes());
-            byte[] signedData = signature.sign();
-            return Base64.getEncoder().encodeToString(signedData);
-        }).onErrorResume(e -> {
-            log.error("Error during digital signing", e);
-            return Mono.error(new RuntimeException("Error during digital signing", e));
+        return Mono.defer(() -> {
+            Observation observation = Observation.start("signature.operation", observationRegistry);
+            return Mono.fromCallable(() -> {
+                try (Observation.Scope scope = observation.openScope()) {
+                    Signature signature = Signature.getInstance("SHA256withRSA", BouncyCastleProvider.PROVIDER_NAME);
+                    signature.initSign(privateKey);
+                    signature.update(contentHash.getBytes());
+                    byte[] signedData = signature.sign();
+                    return Base64.getEncoder().encodeToString(signedData);
+                }
+            })
+            .doOnSuccess(s -> observation.stop())
+            .doOnError(e -> {
+                observation.error(e);
+                observation.stop();
+            })
+            .onErrorResume(e -> {
+                log.error("Error during digital signing", e);
+                return Mono.error(new RuntimeException("Error during digital signing", e));
+            });
         });
     }
 
     @Override
     public Mono<byte[]> signPdf(byte[] pdfContent) {
-        return Mono.fromCallable(() -> {
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                PdfReader reader = new PdfReader(pdfContent);
-                // The 'true' parameter allows multiple signatures
-                PdfStamper stamper = PdfStamper.createSignature(reader, baos, null, null, true);
-                
-                PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
-                // Set signature details
-                appearance.setReason("Electronic Signature");
-                appearance.setLocation("Aegis Sign Platform");
-                appearance.setCrypto(privateKey, certificateChain, null, PdfSignatureAppearance.SELF_SIGNED);
-                
-                stamper.close();
-                return baos.toByteArray();
-            }
-        }).onErrorResume(e -> {
-            log.error("Error signing PDF", e);
-            return Mono.error(new RuntimeException("Error signing PDF", e));
+        return Mono.defer(() -> {
+            Observation observation = Observation.start("signature.pdf.operation", observationRegistry);
+            return Mono.fromCallable(() -> {
+                try (Observation.Scope scope = observation.openScope()) {
+                    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                        PdfReader reader = new PdfReader(pdfContent);
+                        // The 'true' parameter allows multiple signatures
+                        PdfStamper stamper = PdfStamper.createSignature(reader, baos, null, null, true);
+                        
+                        PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
+                        // Set signature details
+                        appearance.setReason("Electronic Signature");
+                        appearance.setLocation("Aegis Sign Platform");
+                        appearance.setCrypto(privateKey, certificateChain, null, PdfSignatureAppearance.SELF_SIGNED);
+                        
+                        stamper.close();
+                        return baos.toByteArray();
+                    }
+                }
+            })
+            .doOnSuccess(s -> observation.stop())
+            .doOnError(e -> {
+                observation.error(e);
+                observation.stop();
+            })
+            .onErrorResume(e -> {
+                log.error("Error signing PDF", e);
+                return Mono.error(new RuntimeException("Error signing PDF", e));
+            });
         });
     }
 }

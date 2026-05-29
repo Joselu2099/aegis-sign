@@ -31,25 +31,23 @@ class SignatureControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void signContract_ShouldReturnSuccess() {
         // 1. Seed KYC Session
-        UUID kycSessionId = UUID.randomUUID();
         KycSession kycSession = KycSession.builder()
-                .id(kycSessionId)
                 .status(KycSession.KycStatus.APPROVED)
                 .documentMetadata(Collections.emptyMap())
                 .signerId("signer123")
                 .build();
-        kycRepositoryPort.save(kycSession).block();
+        KycSession savedKyc = kycRepositoryPort.save(kycSession).block();
+        UUID kycSessionId = savedKyc.getId();
 
         // 2. Seed Contract
-        UUID contractId = UUID.randomUUID();
         Contract contract = Contract.builder()
-                .id(contractId)
                 .templateId("template-1")
                 .status(Contract.ContractStatus.PREPARED)
                 .contentHash("hash-123")
                 .uri("s3://bucket/document.pdf")
                 .build();
-        contractRepositoryPort.save(contract).block();
+        Contract savedContract = contractRepositoryPort.save(contract).block();
+        UUID contractId = savedContract.getId();
 
         // 3. Call Sign Endpoint
         SignatureController.SignRequest request = SignatureController.SignRequest.builder()

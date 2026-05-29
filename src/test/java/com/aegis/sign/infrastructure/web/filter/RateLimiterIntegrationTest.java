@@ -18,8 +18,18 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-    "rate-limit.kyc.capacity=5",
-    "rate-limit.kyc.refill-rate=1"
+    "rate-limit.kyc.capacity=2",
+    "rate-limit.kyc.refill-rate=1",
+    "spring.cloud.vault.enabled=false",
+    "spring.config.import=",
+    "db.username=test",
+    "db.password=test",
+    "keystore.password=changeit",
+    "keystore.key-password=changeit",
+    "minio.access-key=minioadmin",
+    "minio.secret-key=minioadmin",
+    "minio.bucket=aegis-sign",
+    "minio.temp-bucket=aegis-sign-temp"
 })
 class RateLimiterIntegrationTest extends AbstractIntegrationTest {
 
@@ -43,15 +53,15 @@ class RateLimiterIntegrationTest extends AbstractIntegrationTest {
         // KYC endpoint
         String kycUrl = "/api/v1/kyc/sessions?signerId=test-user";
 
-        // First 5 requests should be OK (capacity is 5)
-        IntStream.range(0, 5).forEach(i -> {
+        // First 2 requests should be OK (capacity is 2)
+        IntStream.range(0, 2).forEach(i -> {
             webTestClient.post()
                     .uri(kycUrl)
                     .exchange()
                     .expectStatus().isOk();
         });
 
-        // 6th request should be rate limited
+        // 3rd request should be rate limited
         webTestClient.post()
                 .uri(kycUrl)
                 .exchange()

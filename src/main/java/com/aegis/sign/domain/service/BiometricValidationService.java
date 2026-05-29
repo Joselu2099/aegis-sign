@@ -17,6 +17,7 @@ public class BiometricValidationService {
     public static class ValidationResult {
         private boolean isValid;
         private String errorMessage;
+        private String errorCode;
         private double contrast;
         private int width;
         private int height;
@@ -31,6 +32,7 @@ public class BiometricValidationService {
                 return ValidationResult.builder()
                         .isValid(false)
                         .errorMessage("Invalid image format")
+                        .errorCode("INVALID_IMAGE_FORMAT")
                         .build();
             }
 
@@ -43,6 +45,7 @@ public class BiometricValidationService {
                 return ValidationResult.builder()
                         .isValid(false)
                         .errorMessage("Resolution too low. Minimum 480x480 required.")
+                        .errorCode("LOW_RESOLUTION")
                         .width(width)
                         .height(height)
                         .contrast(contrast)
@@ -53,6 +56,7 @@ public class BiometricValidationService {
                 return ValidationResult.builder()
                         .isValid(false)
                         .errorMessage("Image contrast too low.")
+                        .errorCode("BLURRY_DOCUMENT")
                         .width(width)
                         .height(height)
                         .contrast(contrast)
@@ -65,6 +69,7 @@ public class BiometricValidationService {
                 return ValidationResult.builder()
                         .isValid(false)
                         .errorMessage("No face detected in the image.")
+                        .errorCode("FACE_NOT_DETECTED")
                         .width(width)
                         .height(height)
                         .contrast(contrast)
@@ -78,6 +83,7 @@ public class BiometricValidationService {
                  return ValidationResult.builder()
                         .isValid(false)
                         .errorMessage("Liveness check failed.")
+                        .errorCode("LIVENESS_FAILED")
                         .width(width)
                         .height(height)
                         .contrast(contrast)
@@ -99,6 +105,7 @@ public class BiometricValidationService {
             return ValidationResult.builder()
                     .isValid(false)
                     .errorMessage("Error processing image: " + e.getMessage())
+                    .errorCode("IMAGE_PROCESSING_ERROR")
                     .build();
         }
     }

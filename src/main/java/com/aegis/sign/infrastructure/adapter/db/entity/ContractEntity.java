@@ -30,7 +30,4 @@ public class ContractEntity {
 
     @Column("minio_uri")
     private String minioUri;
-
-    @Column("created_at")
-    private OffsetDateTime createdAt;
 }

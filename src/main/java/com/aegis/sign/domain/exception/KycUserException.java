@@ -1,0 +1,14 @@
+package com.aegis.sign.domain.exception;
+
+public class KycUserException extends RuntimeException {
+    private final String errorCode;
+
+    public KycUserException(String message, String errorCode) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
+    }
+}

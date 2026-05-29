@@ -32,9 +32,46 @@
 
 ## Full Installation & Running Steps
 1. **Infra Setup**: Run `docker compose up -d` to start PostgreSQL, Redis, and MinIO.
-2. **Build**: Run `./mvnw clean install`.
-3. **Run**: Run `./mvnw spring-boot:run`.
-4. **Verify**: Check `http://localhost:8080/actuator/health` (once implemented).
+2. **Secrets Setup**: Configure and write secrets to HashiCorp Vault (see next section).
+3. **Build**: Run `./mvnw clean install`.
+4. **Run**: Run `./mvnw spring-boot:run`.
+5. **Verify**: Check `http://localhost:8080/actuator/health`.
+
+## Secrets Management with HashiCorp Vault
+The application is configured to fetch sensitive configuration (e.g., database passwords, API keys) from HashiCorp Vault. For local development, you can run Vault in a Docker container.
+
+### 1. Run Vault for Development
+You can run a Vault instance in dev mode, which is not secure for production but is convenient for local development.
+
+```bash
+docker run --cap-add=IPC_LOCK -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=root' --name=dev-vault vault
+```
+
+This command starts Vault and sets the root token to `root`.
+
+### 2. Set Environment Variables
+The application needs the Vault address and token to connect. Export the following environment variables:
+
+```bash
+export VAULT_ADDR='http://127.0.0.1:8200'
+export VAULT_TOKEN='root'
+```
+
+The application's `application.yml` is configured to use `VAULT_URI` and `VAULT_TOKEN`, so you can set `VAULT_URI` instead of `VAULT_ADDR`. For consistency with the `vault` CLI, `VAULT_ADDR` is recommended.
+
+### 3. Write Secrets to Vault
+The application reads secrets from `secret/aegis-sign`. Write the necessary secrets using the `vault` CLI:
+
+```bash
+vault kv put secret/aegis-sign \
+    db.username="aegis_user" \
+    db.password="aegis_password" \
+    minio.access-key="aegis_admin" \
+    minio.secret-key="aegis_admin_password" \
+    keystore.password="changeit" \
+    keystore.key-password="changeit"
+```
+After completing these steps, the application will be able to start successfully. The `spring.cloud.vault.fail-fast: true` property ensures that the application will not start if it cannot connect to Vault and read the secrets.
 
 ## Key Operational Commands
 | Command / Script | Purpose | Context/Module |

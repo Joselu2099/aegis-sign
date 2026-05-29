@@ -53,7 +53,7 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
         return KycSessionEntity.builder()
                 .id(session.getId())
                 .status(mapStatusToDb(session.getStatus()))
-                .extractedData(extractedData)
+                .extractedData(extractedData != null ? io.r2dbc.postgresql.codec.Json.of(extractedData) : null)
                 .biometricScore(session.getFaceMatchScore())
                 .expiresAt(OffsetDateTime.now().plusHours(1))
                 .build();
@@ -69,7 +69,7 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
 
         if (entity.getExtractedData() != null) {
             try {
-                Map<String, Object> data = objectMapper.readValue(entity.getExtractedData(), new TypeReference<>() {});
+                Map<String, Object> data = objectMapper.readValue(entity.getExtractedData().asString(), new TypeReference<>() {});
                 for (Map.Entry<String, Object> entry : data.entrySet()) {
                     String key = entry.getKey();
                     Object value = entry.getValue();

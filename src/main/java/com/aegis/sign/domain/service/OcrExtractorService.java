@@ -1,5 +1,7 @@
 package com.aegis.sign.domain.service;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
@@ -26,12 +28,14 @@ public class OcrExtractorService {
 
     private static final Logger log = LoggerFactory.getLogger(OcrExtractorService.class);
     private final ITesseract tesseract;
+    private final ObservationRegistry observationRegistry;
 
     @Value("${tesseract.datapath}")
     private String tessdataPath;
 
-    public OcrExtractorService(ITesseract tesseract) {
+    public OcrExtractorService(ITesseract tesseract, ObservationRegistry observationRegistry) {
         this.tesseract = tesseract;
+        this.observationRegistry = observationRegistry;
     }
 
     @PostConstruct
@@ -51,6 +55,11 @@ public class OcrExtractorService {
      * @return A map containing extracted field names and their values.
      */
     public Map<String, String> extractData(byte[] imageBytes) {
+        return Observation.createNotStarted("ocr.extraction", observationRegistry)
+                .observe(() -> doExtractData(imageBytes));
+    }
+
+    private Map<String, String> doExtractData(byte[] imageBytes) {
         Map<String, String> extractedFields = new HashMap<>();
         
         if (imageBytes == null || imageBytes.length == 0) {
@@ -61,7 +70,7 @@ public class OcrExtractorService {
             BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
             if (bufferedImage == null) {
                 log.warn("Could not decode image from byte array.");
-                return getFallbackData();
+                throw new com.aegis.sign.domain.exception.KycUserException("Could not decode image.", "INVALID_IMAGE_FORMAT");
             }
 
             String result = tesseract.doOCR(bufferedImage);
@@ -71,11 +80,11 @@ public class OcrExtractorService {
 
         } catch (TesseractException | IOException e) {
             log.error("OCR extraction failed: {}", e.getMessage());
-            return getFallbackData();
+            throw new com.aegis.sign.domain.exception.KycTechnicalException("OCR engine down.", "OCR_ENGINE_DOWN", e);
         } catch (Error e) {
             // Catch UnsatisfiedLinkError if native Tesseract libraries are missing
             log.error("Tesseract native libraries not available: {}", e.getMessage());
-            return getFallbackData();
+            throw new com.aegis.sign.domain.exception.KycTechnicalException("OCR engine down.", "OCR_ENGINE_DOWN", e);
         }
 
         return extractedFields;
@@ -186,14 +195,5 @@ public class OcrExtractorService {
         fields.put("expiryDate", mrzLine2.substring(21, 27));
         fields.put("expiryDateCheckDigit", mrzLine2.substring(27, 28));
         fields.put("compositeCheckDigit", mrzLine2.substring(35, 36));
-    }
-
-    private Map<String, String> getFallbackData() {
-        Map<String, String> fallback = new HashMap<>();
-        fallback.put("documentNumber", "OCR_FAILED_DOC_NUM");
-        fallback.put("expiryDate", "OCR_FAILED_EXP_DATE");
-        fallback.put("birthDate", "OCR_FAILED_BIRTH_DATE");
-        fallback.put("mrzType", "NONE");
-        return fallback;
     }
 }

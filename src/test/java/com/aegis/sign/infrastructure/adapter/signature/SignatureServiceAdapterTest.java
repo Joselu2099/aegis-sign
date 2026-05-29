@@ -1,5 +1,6 @@
 package com.aegis.sign.infrastructure.adapter.signature;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -23,6 +24,7 @@ class SignatureServiceAdapterTest {
         // Use the actual keystore from src/main/resources for testing
         signatureServiceAdapter = new SignatureServiceAdapter(
                 resourceLoader,
+                ObservationRegistry.NOOP,
                 "classpath:keystore.p12",
                 "changeit",
                 "aegis-sign",

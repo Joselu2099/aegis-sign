@@ -32,7 +32,7 @@ public class SignatureRepositoryAdapter implements SignatureRepositoryPort {
         return SignatureEntity.builder()
                 .id(signature.getId())
                 .contractId(signature.getContractId())
-                .signerInfo("{\"signerId\":\"" + signature.getSignerId() + "\"}")
+                .signerInfo(io.r2dbc.postgresql.codec.Json.of("{\"signerId\":\"" + signature.getSignerId() + "\"}"))
                 .x509CertificateSn(signature.getCertificateThumbprint())
                 .timestamp(signature.getTimestamp())
                 .build();
@@ -42,7 +42,7 @@ public class SignatureRepositoryAdapter implements SignatureRepositoryPort {
         return Signature.builder()
                 .id(entity.getId())
                 .contractId(entity.getContractId())
-                .signerId(entity.getSignerInfo()) // Simplified mapping
+                .signerId(entity.getSignerInfo() != null ? entity.getSignerInfo().asString() : null) // Simplified mapping
                 .certificateThumbprint(entity.getX509CertificateSn())
                 .timestamp(entity.getTimestamp())
                 .build();

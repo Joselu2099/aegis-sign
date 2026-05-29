@@ -1,5 +1,6 @@
 package com.aegis.sign.infrastructure.adapter.db.entity;
 
+import io.r2dbc.postgresql.codec.Json;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,7 +27,7 @@ public class KycSessionEntity {
     private OffsetDateTime expiresAt;
 
     @Column("extracted_data")
-    private String extractedData; // JSONB
+    private Json extractedData; // JSONB
 
     @Column("biometric_score")
     private Double biometricScore;

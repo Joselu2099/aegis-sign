@@ -1,5 +1,6 @@
 package com.aegis.sign.domain.service;
 
+import io.micrometer.observation.ObservationRegistry;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +25,7 @@ class OcrExtractorServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        ocrExtractorService = new OcrExtractorService(tesseract);
+        ocrExtractorService = new OcrExtractorService(tesseract, ObservationRegistry.NOOP);
     }
 
     @Test
@@ -49,15 +50,19 @@ class OcrExtractorServiceTest {
     }
 
     @Test
-    void shouldFallbackToMockDataOnTesseractException() throws TesseractException {
-        byte[] imageBytes = new byte[]{0x47, 0x49, 0x46, 0x38}; // Invalid image header but enough to try
+    void shouldThrowTechnicalExceptionOnTesseractException() throws TesseractException {
+        byte[] imageBytes = new byte[]{
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, (byte) 0x80, 0x00, 0x00, (byte) 0xff, (byte) 0xff, (byte) 0xff,
+            0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+            0x01, 0x00, 0x3b
+        };
         when(tesseract.doOCR(any(BufferedImage.class))).thenThrow(new TesseractException("Failed"));
 
-        Map<String, String> results = ocrExtractorService.extractData(imageBytes);
+        com.aegis.sign.domain.exception.KycTechnicalException exception = assertThrows(com.aegis.sign.domain.exception.KycTechnicalException.class, () -> {
+            ocrExtractorService.extractData(imageBytes);
+        });
         
-        assertNotNull(results);
-        assertEquals("OCR_FAILED_DOC_NUM", results.get("documentNumber")); // Check fallback
-        assertNull(results.get("rawContent"));
+        assertEquals("OCR_ENGINE_DOWN", exception.getErrorCode());
     }
 
     @Test
@@ -70,9 +75,11 @@ class OcrExtractorServiceTest {
     @Test
     void shouldFallbackOnInvalidImage() {
         byte[] invalidImage = new byte[]{1, 2, 3};
-        Map<String, String> results = ocrExtractorService.extractData(invalidImage);
         
-        assertNotNull(results);
-        assertEquals("OCR_FAILED_DOC_NUM", results.get("documentNumber"));
+        com.aegis.sign.domain.exception.KycUserException exception = assertThrows(com.aegis.sign.domain.exception.KycUserException.class, () -> {
+            ocrExtractorService.extractData(invalidImage);
+        });
+        
+        assertEquals("INVALID_IMAGE_FORMAT", exception.getErrorCode());
     }
 }
