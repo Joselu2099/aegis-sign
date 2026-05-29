@@ -25,6 +25,7 @@ class StoragePurgeWorkerTest {
     @Test
     void purgeExpiredFiles_ShouldCallListAndDeleteTempFiles() {
         // Given
+        org.springframework.test.util.ReflectionTestUtils.setField(storagePurgeWorker, "retentionDays", 7);
         String path1 = "path/to/old/file1.png";
         String path2 = "path/to/old/file2.pdf";
         when(storagePort.listTempFilesOlderThan(anyInt())).thenReturn(Flux.just(path1, path2));
@@ -34,7 +35,7 @@ class StoragePurgeWorkerTest {
         storagePurgeWorker.purgeExpiredFiles();
 
         // Then
-        verify(storagePort).listTempFilesOlderThan(0);
+        verify(storagePort).listTempFilesOlderThan(7);
         verify(storagePort).deleteTempFile(path1);
         verify(storagePort).deleteTempFile(path2);
     }
@@ -42,13 +43,14 @@ class StoragePurgeWorkerTest {
     @Test
     void purgeExpiredFiles_WhenEmpty_ShouldNotDeleteAnyTempFiles() {
         // Given
-        when(storagePort.listTempFilesOlderThan(anyInt())).thenReturn(Flux.empty());
+        org.springframework.test.util.ReflectionTestUtils.setField(storagePurgeWorker, "retentionDays", 7);
+        when(storagePort.listTempFilesOlderThan(7)).thenReturn(Flux.empty());
 
         // When
         storagePurgeWorker.purgeExpiredFiles();
 
         // Then
-        verify(storagePort).listTempFilesOlderThan(0);
+        verify(storagePort).listTempFilesOlderThan(7);
         verify(storagePort, never()).deleteTempFile(anyString());
     }
 }

@@ -60,7 +60,7 @@ class SignatureInteractorTest {
 
     @Test
     void signContract_ShouldUpdateStatusAndCreateAuditTrail() {
-        // Mock encryptionPort.encrypt behavior
+        // Mock encryptionPort.encrypt behavior for existing tests
         when(encryptionPort.encrypt(anyString())).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 
         // Arrange

@@ -98,17 +98,17 @@ class KycInteractorTest {
                 .documentMetadata(new HashMap<>())
                 .build();
 
+        BiometricValidationService.ValidationResult validationResult = BiometricValidationService.ValidationResult.builder()
+                .isValid(true)
+                .contrast(15.0)
+                .width(600)
+                .height(800)
+                .livenessScore(0.85)
+                .faceDetected(true)
+                .build();
+
         when(kycRepositoryPort.findById(sessionId)).thenReturn(Mono.just(session));
-        when(biometricValidationService.validate(any())).thenReturn(
-                BiometricValidationService.ValidationResult.builder()
-                        .isValid(true)
-                        .contrast(15.0)
-                        .width(500)
-                        .height(500)
-                        .livenessScore(0.9)
-                        .faceDetected(true)
-                        .build()
-        );
+        when(biometricValidationService.validate(biometricContent)).thenReturn(validationResult);
         when(storagePort.uploadTempFile(any(byte[].class), anyString())).thenReturn(Mono.just(expectedPath)); // Mock upload
         when(kycRepositoryPort.save(any(KycSession.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 

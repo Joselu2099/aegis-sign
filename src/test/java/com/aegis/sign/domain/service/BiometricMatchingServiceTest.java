@@ -6,20 +6,17 @@ import reactor.test.StepVerifier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.springframework.test.util.ReflectionTestUtils;
+import org.junit.jupiter.api.BeforeEach;
+
 class BiometricMatchingServiceTest {
 
-    private final BiometricMatchingService biometricMatchingService;
+    private BiometricMatchingService biometricMatchingService;
 
-    public BiometricMatchingServiceTest() {
+    @BeforeEach
+    void setUp() {
         biometricMatchingService = new BiometricMatchingService();
-        // Set the matchThreshold using reflection or by creating a setter (since it's not initialized by Spring here)
-        try {
-            java.lang.reflect.Field field = BiometricMatchingService.class.getDeclaredField("matchThreshold");
-            field.setAccessible(true);
-            field.set(biometricMatchingService, 0.8);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        ReflectionTestUtils.setField(biometricMatchingService, "matchThreshold", 0.8);
     }
 
     @Test
