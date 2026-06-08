@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface KycUseCase {
     Mono<KycSession> createSession(String signerId);
+    Mono<KycSession> getSession(UUID sessionId);
     Mono<KycSession> verifySession(UUID sessionId);
     Mono<KycSession> submitIdDocument(UUID sessionId, byte[] content);
     Mono<KycSession> submitBiometrics(UUID sessionId, byte[] content);

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -17,6 +18,7 @@ public class Contract {
     private ContractStatus status;
     private String uri;
     private String templateId;
+    private List<String> signerIds;
 
     public void markAsSigned() {
         if (this.status == ContractStatus.SIGNED) {
@@ -26,6 +28,6 @@ public class Contract {
     }
 
     public enum ContractStatus {
-        PREPARED, SIGNED, REVOKED
+        DRAFT, PREPARED, PENDING_SIGNATURE, SIGNED, CANCELLED, EXPIRED, REVOKED
     }
 }

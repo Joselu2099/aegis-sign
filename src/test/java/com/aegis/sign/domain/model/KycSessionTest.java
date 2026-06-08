@@ -8,7 +8,7 @@ class KycSessionTest {
     @Test
     void approve_ShouldUpdateStatusAndScore() {
         KycSession session = KycSession.builder()
-                .status(KycSession.KycStatus.PENDING)
+                .status(KycSession.KycStatus.PENDING_DOCUMENTS)
                 .build();
 
         session.approve(0.95);
@@ -20,7 +20,7 @@ class KycSessionTest {
     @Test
     void reject_ShouldUpdateStatus() {
         KycSession session = KycSession.builder()
-                .status(KycSession.KycStatus.PENDING)
+                .status(KycSession.KycStatus.PENDING_DOCUMENTS)
                 .build();
 
         session.reject();

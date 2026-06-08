@@ -49,7 +49,7 @@ class KycInteractorTest {
         UUID sessionId = UUID.randomUUID();
         KycSession session = KycSession.builder()
                 .id(sessionId)
-                .status(KycSession.KycStatus.PENDING)
+                .status(KycSession.KycStatus.PENDING_DOCUMENTS)
                 .build();
 
         when(kycRepositoryPort.findById(sessionId)).thenReturn(Mono.just(session));
