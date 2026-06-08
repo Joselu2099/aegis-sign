@@ -12,6 +12,8 @@ import com.aegis.sign.domain.port.EncryptionPort;
 import com.aegis.sign.domain.port.StoragePort;
 import com.aegis.sign.domain.service.PdfTemplateCompiler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -42,6 +44,11 @@ public class SignatureInteractor implements SignatureUseCase {
     public Mono<Signature> getSignature(UUID signatureId) {
         return signatureRepositoryPort.findById(signatureId)
                 .switchIfEmpty(Mono.error(new com.aegis.sign.domain.exception.ResourceNotFoundException("Signature not found: " + signatureId)));
+    }
+
+    @Override
+    public Mono<Page<Signature>> listByContractId(UUID contractId, Pageable pageable) {
+        return signatureRepositoryPort.findByContractId(contractId, pageable);
     }
 
     @Override

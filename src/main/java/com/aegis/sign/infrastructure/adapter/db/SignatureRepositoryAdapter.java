@@ -5,6 +5,9 @@ import com.aegis.sign.domain.port.SignatureRepositoryPort;
 import com.aegis.sign.infrastructure.adapter.db.entity.SignatureEntity;
 import com.aegis.sign.infrastructure.adapter.db.repository.SignatureRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +31,17 @@ public class SignatureRepositoryAdapter implements SignatureRepositoryPort {
                 .map(this::toDomain);
     }
 
+    @Override
+    public Mono<Page<Signature>> findByContractId(UUID contractId, Pageable pageable) {
+        return repository.findByContractId(contractId, pageable)
+                .collectList()
+                .map(entities -> new PageImpl<>(
+                        entities.stream().map(this::toDomain).toList(),
+                        pageable,
+                        entities.size()
+                ));
+    }
+
     private SignatureEntity toEntity(Signature signature) {
         return SignatureEntity.builder()
                 .id(signature.getId())
@@ -42,9 +56,10 @@ public class SignatureRepositoryAdapter implements SignatureRepositoryPort {
         return Signature.builder()
                 .id(entity.getId())
                 .contractId(entity.getContractId())
-                .signerId(entity.getSignerInfo() != null ? entity.getSignerInfo().asString() : null) // Simplified mapping
+                .signerId(entity.getSignerInfo() != null ? entity.getSignerInfo().asString() : null)
                 .certificateThumbprint(entity.getX509CertificateSn())
                 .timestamp(entity.getTimestamp())
                 .build();
     }
 }
+

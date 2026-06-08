@@ -7,6 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +31,14 @@ public class SignatureController {
     @GetMapping("/{id}")
     public Mono<ApiResponse<Signature>> getSignature(@PathVariable UUID id) {
         return signatureUseCase.getSignature(id)
+                .map(ApiResponse::success);
+    }
+
+    @GetMapping
+    public Mono<ApiResponse<Page<Signature>>> listByContractId(
+            @RequestParam UUID contractId,
+            @PageableDefault(size = 20, page = 0) Pageable pageable) {
+        return signatureUseCase.listByContractId(contractId, pageable)
                 .map(ApiResponse::success);
     }
 
