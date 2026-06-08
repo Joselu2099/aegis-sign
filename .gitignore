@@ -49,3 +49,8 @@ docs/
 releases/
 logs/
 
+.claude/
+.codemie/
+.synthforge/
+.vscode/
+notes/correctivos/
