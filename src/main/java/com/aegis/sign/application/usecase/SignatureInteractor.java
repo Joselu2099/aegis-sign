@@ -39,6 +39,12 @@ public class SignatureInteractor implements SignatureUseCase {
     }
 
     @Override
+    public Mono<Signature> getSignature(UUID signatureId) {
+        return signatureRepositoryPort.findById(signatureId)
+                .switchIfEmpty(Mono.error(new com.aegis.sign.domain.exception.ResourceNotFoundException("Signature not found: " + signatureId)));
+    }
+
+    @Override
     public Mono<Signature> signContract(UUID contractId, UUID kycSessionId, String signerId, String certificateThumbprint, String ipAddress, String userAgent) {
         return contractRepositoryPort.findById(contractId)
                 .flatMap(contract -> encryptionPort.encrypt(certificateThumbprint)

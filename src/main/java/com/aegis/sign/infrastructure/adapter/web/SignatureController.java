@@ -25,8 +25,14 @@ public class SignatureController {
                 .map(ApiResponse::success);
     }
 
+    @GetMapping("/{id}")
+    public Mono<ApiResponse<Signature>> getSignature(@PathVariable UUID id) {
+        return signatureUseCase.getSignature(id)
+                .map(ApiResponse::success);
+    }
+
     @PostMapping("/sign")
-    public Mono<ApiResponse<Signature>> sign(@RequestBody SignRequest request, 
+    public Mono<ApiResponse<Signature>> sign(@RequestBody SignRequest request,
                                              @RequestHeader(value = "X-Forwarded-For", defaultValue = "127.0.0.1") String ipAddress,
                                              @RequestHeader(value = "User-Agent", defaultValue = "Unknown") String userAgent) {
         return signatureUseCase.signContract(

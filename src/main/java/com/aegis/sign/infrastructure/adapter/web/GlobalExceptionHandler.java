@@ -2,6 +2,7 @@ package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.domain.exception.KycTechnicalException;
 import com.aegis.sign.domain.exception.KycUserException;
+import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.domain.exception.TemplateNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
