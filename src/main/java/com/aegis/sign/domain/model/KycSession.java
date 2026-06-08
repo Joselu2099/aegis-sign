@@ -29,6 +29,6 @@ public class KycSession {
     }
 
     public enum KycStatus {
-        PENDING, APPROVED, REJECTED
+        PENDING_DOCUMENTS, PROCESSING, MANUAL_REVIEW, APPROVED, REJECTED
     }
 }

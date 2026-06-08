@@ -1,102 +1,133 @@
-# Reporte de Estado del Proyecto - aegis-sign
-
-Este documento detalla la verificación final y el estado de cumplimiento del microservicio `aegis-sign` tras la ejecución de las tareas del plan de Synthforge y el desarrollo reciente.
-
----
-
-## 1. Resumen de la Verificación
-
-El proyecto compila correctamente y se encuentra en un estado funcional respecto a las reglas de negocio descritas en la especificación. Se ha realizado una auditoría estricta de la estructura de código bajo el modelo de **Arquitectura Hexagonal (Clean Architecture)** y se verificó el cumplimiento de las capas.
-
-### Indicadores Clave de Estado
-- **Tareas del Plan Core Reciente:**
-  - **Task 1: SHA-256 Document Hashing:** Completada e integrada.
-  - **Task 2: X.509 Digital Sealing (BouncyCastle):** Completada e integrada.
-  - **Task 3: Real OCR Integration (Tess4j):** Completada e integrada.
-  - **Task 4: Biometric Matching and Liveness:** En desarrollo activo.
-- **Compilación de Maven:** Exitosa localmente (con dependencias cacheadas). Se detecta restricción de descarga de dependencias externas por proxy corporativo en el entorno de compilación.
-- **Pruebas Unitarias y de Arquitectura:** 20+ pruebas unitarias y de arquitectura superadas con éxito.
-- **Pruebas de Integración:** Pruebas de integración E2E estructuradas, pendientes de ejecución local por falta de Docker/Testcontainers en el daemon local.
+# Estado del Proyecto - aegis-sign
+> Actualizado: 2026-06-08 — análisis con tests reales sobre stack Docker (sin Docker Desktop)
 
 ---
 
-## 2. Alineación y Cumplimiento de Requisitos
+## Resumen ejecutivo
 
-A continuación se presenta la matriz de cumplimiento respecto a [requirements.md](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/requirements.md):
-
-| ID Requisito | Descripción | Estatus de Implementación | Comentarios / Código Asociado |
-|--------------|-------------|---------------------------|-------------------------------|
-| **RF-KYC-01** | Gestión de Sesión Efímera | **Completado y Probado** | Implementado en [KycInteractor.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/application/usecase/KycInteractor.java) y guardado reactivamente en [KycRepositoryAdapter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/db/KycRepositoryAdapter.java). |
-| **RF-KYC-02** | Pipeline de Ingesta Documental | **Completado y Probado** | Endpoints multipart en [KycController.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/web/KycController.java). Carga binaria no bloqueante asíncrona a MinIO en [MinioStorageAdapter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/storage/MinioStorageAdapter.java). |
-| **RF-KYC-03** | Procesamiento OCR y MRZ | **Completado** (Servicios) | Algoritmo de validación de checksum ICAO Doc 9303 implementado en [MrzValidationService.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/MrzValidationService.java). Integración de motor OCR nativo Tess4j completada en [OcrExtractorService.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/OcrExtractorService.java). *Falta integrar la llamada en el flujo del caso de uso (`KycInteractor`).* |
-| **RF-KYC-04** | Captura Biométrica y Calidad | **En Desarrollo** | Mapeo de archivos biométricos y guardado básico en base de datos. Análisis de calidad en desarrollo. |
-| **RF-KYC-05** | Comparación Facial 1:1 | **En Desarrollo** | Matcher facial en desarrollo activo en [BiometricMatchingService.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/BiometricMatchingService.java) y [MatchResult.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/model/MatchResult.java). *Falta integrar la llamada en el flujo de caso de uso (`KycInteractor`).* |
-| **RF-SIG-01** | Renderizado de Contratos | **Completado y Probado** | Compilación reactiva en PDF a través de JSON estructurado implementada en [PdfTemplateCompiler.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/PdfTemplateCompiler.java). |
-| **RF-SIG-02** | Hashing e Integridad | **Completado y Probado** | Generación de SHA-256 del documento PDF implementada en [PdfTemplateCompiler.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/PdfTemplateCompiler.java) y endpoint en [SignatureController.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/web/SignatureController.java). |
-| **RF-SIG-03** | Sellado Digital PAdES | **Completado y Probado** | Sellado digital real con criptografía asimétrica X.509 implementado en [SignatureServiceAdapter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/signature/SignatureServiceAdapter.java) usando BouncyCastle (`SHA256withRSA`). |
-| **RF-SIG-04** | Compilación de Audit Trail | **Parcialmente Completado** | Estructura de evidencias en JSON e IP/User-Agent guardada en base de datos en [SignatureInteractor.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/application/usecase/SignatureInteractor.java). *Falta generación y firmado del reporte PDF final e independiente.* |
-| **RNF-01** | Alta Concurrencia (Reactivo) | **Completado y Probado** | Escrito de extremo a extremo usando Spring WebFlux y R2DBC de forma no bloqueante. |
-| **RNF-02** | Aislamiento y Autohospedaje | **Completado y Probado** | Dependencia nula de APIs externas; procesamiento local de OCR y Criptografía. |
-| **RNF-03** | Criptografía y Seguridad | **Completado** (Servicio) | Firma digital asimétrica X.509 implementada. *Falta configurar el Keystore PKCS12 persistente en producción.* |
-| **RNF-04** | Ciclo de Vida de PII (GDPR) | **Completado y Probado** | Sesiones temporales (Redis TTL) y worker automático de purga programada de MinIO después de 7 días en [StoragePurgeWorker.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/worker/StoragePurgeWorker.java). |
-| **RNF-05** | Portabilidad y Despliegue | **Completado y Probado** | Dockerfile y docker-compose.yml preparados; soporte GraalVM Native listo. |
-| **3.1 Idempotencia** | Control de Duplicados | **Completado** | Soporte de `Idempotency-Key` en cabeceras de endpoints clave. |
-| **3.2 Rate Limiting** | Limitador de Tasa Reactivo | **Completado y Probado** | Implementado en [TokenBucketRateLimiterFilter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/web/filter/TokenBucketRateLimiterFilter.java) mediante script Lua en Redis. |
+El microservicio **compila y arranca correctamente**. La infraestructura (Postgres, Redis, MinIO) funciona. Sin embargo, los tests E2E sobre los endpoints reales revelan **bugs críticos que bloquean el flujo core** y varias funcionalidades declaradas como "completadas" en el estado anterior que **no están conectadas al flujo de uso**.
 
 ---
 
-## 3. Detalle Técnico de Implementaciones Recientes
+## Resultados de tests E2E (ejecutados sobre stack Docker)
 
-### 3.1. Task 1: SHA-256 Document Hashing
-- **Objetivo:** Calcular de forma inmutable el hash SHA-256 de cualquier archivo PDF compilado o documento antes del proceso de firma digital para garantizar el principio de no alteración previa.
-- **Implementación:**
-  - Se agregó el método `calculateHash(byte[] content)` en [PdfTemplateCompiler.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/PdfTemplateCompiler.java). Utiliza `java.security.MessageDigest` con el algoritmo `"SHA-256"` y da formato hexadecimal usando `java.util.HexFormat`.
-  - Se añadieron pruebas unitarias en [PdfTemplateCompilerTest.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/test/java/com/aegis/sign/domain/service/PdfTemplateCompilerTest.java) que validan el cálculo correcto del hash contra una salida conocida de prueba.
-
-### 3.2. Task 2: X.509 Digital Sealing (BouncyCastle)
-- **Objetivo:** Reemplazar el dummy de firma anterior con una firma criptográfica asimétrica real utilizando estándares de cifrado X.509 y la biblioteca BouncyCastle.
-- **Implementación:**
-  - Se añadió la dependencia `org.bouncycastle:bcprov-jdk18on:1.78` en el archivo [pom.xml](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/pom.xml).
-  - En [SignatureServiceAdapter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/signature/SignatureServiceAdapter.java), se registró estáticamente BouncyCastleProvider (`Security.addProvider(new BouncyCastleProvider())`).
-  - Para demostración y pruebas, el constructor genera dinámicamente un par de claves RSA de 2048 bits. En el método `sign(...)`, se firma digitalmente el hash del documento con la clave privada usando el algoritmo `"SHA256withRSA"` con el proveedor `"BC"`. El resultado se devuelve codificado en Base64.
-  - Se crearon pruebas unitarias completas en [SignatureServiceAdapterTest.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/test/java/com/aegis/sign/infrastructure/adapter/signature/SignatureServiceAdapterTest.java) para verificar que las firmas generadas son Base64 válidas y cambian para diferentes hashes de entrada.
-
-### 3.3. Task 3: Real OCR Integration (Tess4j)
-- **Objetivo:** Habilitar el procesamiento OCR local para documentos de identidad cargados, reduciendo dependencias externas.
-- **Implementación:**
-  - Se incorporó la dependencia `net.sourceforge.tess4j:tess4j:5.11.0` en [pom.xml](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/pom.xml).
-  - En [OcrExtractorService.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/OcrExtractorService.java), se integró el motor de Tesseract. El método `extractData(byte[] imageBytes)` decodifica el array en un `BufferedImage`, invoca el método nativo `doOCR` de Tesseract y procesa el resultado mediante expresiones regulares para extraer el `documentNumber` (formato `[A-Z][0-9]{7}[A-Z0-9]`), la fecha de nacimiento (`birthDate`) y la fecha de vencimiento (`expiryDate`).
-  - Cuenta con un manejo robusto de errores que atrapa excepciones de E/S, de Tesseract, y de tipo `UnsatisfiedLinkError` (si las librerías binarias de Tesseract no están instaladas en el sistema anfitrión), retornando datos de fallback por compatibilidad.
-  - Se implementó una suite de pruebas unitarias exhaustiva en [OcrExtractorServiceTest.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/test/java/com/aegis/sign/domain/service/OcrExtractorServiceTest.java) utilizando Mockito para aislar las llamadas nativas a Tesseract y simular flujos de éxito, fallos y datos incorrectos.
+| Endpoint | Resultado | HTTP | Problema |
+|---|---|---|---|
+| `GET /actuator/health` | PASS | 200 | OK |
+| `POST /api/v1/kyc/sessions` | **FAIL** | 500 | bad SQL grammar UPDATE — R2DBC no puede hacer INSERT con UUID manual |
+| `GET /api/v1/kyc/sessions/{id}` | **FAIL** | 200 vacío | Debe ser 404 cuando no existe; auto-aprueba en cada GET |
+| `POST /api/v1/kyc/sessions/{id}/documents` | Bloqueado | — | Depende de session creation (task 1) |
+| `POST /api/v1/kyc/sessions/{id}/biometrics` | Bloqueado | — | Depende de session creation (task 1) |
+| `POST /api/v1/kyc/sessions` (sin signerId) | PASS | 400 | Validación correcta |
+| `POST /api/v1/signatures/prepare` (sin contrato) | **FAIL** | 200 vacío | Debe ser 404 |
+| `POST /api/v1/signatures/sign` (sin body) | PASS | 400 | Validación correcta |
+| `POST /api/v1/signatures/sign` (contrato inexistente) | **FAIL** | 200 vacío | Debe ser 404 |
+| Rate limiter KYC (15 req rápidas) | PASS | 429 | Funciona (7/15 bloqueadas) |
+| `GET /api/v1/signatures/{id}` | PASS | 404 | No implementado (esperado) |
+| `POST /api/v1/contracts` | PASS | 404 | No implementado (esperado) |
+| `GET /api/v1/contracts/{id}` | PASS | 404 | No implementado (esperado) |
 
 ---
 
-## 4. Gaps / Cosas Pendientes de Implementación y Prueba
+## Matriz de cumplimiento vs GOAL.md
 
-Fuera del alcance de la implementación actual en desarrollo por la CLI de Gemini (Task 4), se identifican los siguientes desarrollos y pruebas pendientes:
+| Requisito | Descripción | Estado real | Notas |
+|---|---|---|---|
+| **RF-KYC-01** | Gestión de sesión KYC | **ROTO** | POST /kyc/sessions → 500. Bug R2DBC. |
+| **RF-KYC-02** | Pipeline ingesta documental | **PARCIAL** | Endpoint existe, multipart funciona, pero NO sube a MinIO ni actualiza status. |
+| **RF-KYC-03** | OCR + validación MRZ | **DESCONECTADO** | `OcrExtractorService` y `MrzValidationService` existen pero no se invocan en `KycInteractor`. |
+| **RF-KYC-04** | Captura biométrica | **DESCONECTADO** | Solo guarda "UPLOADED" en metadata. No sube a MinIO. |
+| **RF-KYC-05** | Comparación facial 1:1 | **DESCONECTADO** | `BiometricMatchingService` existe pero no se llama. `verifySession` auto-aprueba sin lógica. |
+| **RF-SIG-01** | Renderizado contrato PDF | **IMPLEMENTADO** | `PdfTemplateCompiler` funciona. Falta endpoint de creación de contrato. |
+| **RF-SIG-02** | SHA-256 hash documento | **IMPLEMENTADO** | `calculateHash()` en PdfTemplateCompiler correcto. |
+| **RF-SIG-03** | Sellado digital X.509 | **PARCIAL** | Firma RSA con BouncyCastle funciona. Clave privada **efímera** (se pierde al reiniciar). |
+| **RF-SIG-04** | Audit Trail inmutable | **PARCIAL** | Guarda evento SIGNATURE en DB. No genera ni firma el PDF final del audit trail. |
+| **RNF-01** | Alta concurrencia reactiva | **OK** | WebFlux + R2DBC end-to-end. |
+| **RNF-02** | Zero third-party | **OK** | Sin dependencias externas de APIs. |
+| **RNF-03** | Criptografía | **PARCIAL** | Firma funciona. KeyStore no persistente. |
+| **RNF-04** | Ciclo de vida PII (GDPR) | **PARCIAL** | StoragePurgeWorker implementado. MinIO bucket no se crea automáticamente. Redis TTL no configurado en sesiones. |
+| **RNF-05** | Portabilidad Docker | **OK** | Stack funciona sin Docker Desktop. |
 
-### 1. Integración de los Servicios de Dominio en el Caso de Uso de KYC (`KycInteractor`)
-- **Problema:** [KycInteractor.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/application/usecase/KycInteractor.java) recibe los bytes del documento y del selfie, pero no realiza ninguna llamada a `OcrExtractorService` ni a `BiometricMatchingService`. Simplemente marca metadatos como `"UPLOADED"` y auto-aprueba la sesión al consultar.
-- **Acción Requerida:**
-  - En `submitIdDocument`, procesar el archivo con `OcrExtractorService` y validar los datos MRZ mediante `MrzValidationService`. Almacenar los campos resultantes en `documentMetadata` de la sesión.
-  - En `submitBiometrics`, almacenar la imagen biométrica en un bucket temporal de MinIO y guardar la referencia en la sesión.
-  - En `verifySession`, invocar `BiometricMatchingService.calculateMatchScore` comparando la foto del ID contra la selfie para calcular el porcentaje de similitud real, aprobando o rechazando la sesión según el umbral configurado.
+---
 
-### 2. Almacenamiento de Llaves Criptográficas en KeyStore PKCS12 Real
-- **Problema:** En [SignatureServiceAdapter.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/infrastructure/adapter/signature/SignatureServiceAdapter.java), las claves de firma se autogeneran en memoria en cada inicio, perdiéndose la trazabilidad e inmutabilidad con el certificado raíz en despliegues reales.
-- **Acción Requerida:**
-  - Configurar properties `keystore.path`, `keystore.password` y `keystore.alias` en `application.yml`.
-  - Modificar el adaptador para cargar la clave privada del firmante institucional y su cadena de certificados de confianza desde un almacén PKCS12 real en el arranque del servicio.
+## Bugs críticos (bloquean funcionalidad core)
 
-### 3. Generación y Sellado Digital del PDF del Audit Trail (Pista de Auditoría)
-- **Problema:** Se guardan las evidencias en base de datos (`audit_trails`), pero la especificación técnica exige que al finalizar la transacción de firma se compile un informe en PDF inalterable conteniendo todas las evidencias y que este PDF sea firmado digitalmente con el certificado raíz.
-- **Acción Requerida:**
-  - Crear una plantilla de PDF para el reporte de Audit Trail (pista de auditoría legal).
-  - Usar [PdfTemplateCompiler.java](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/src/main/java/com/aegis/sign/domain/service/PdfTemplateCompiler.java) para generar el reporte de evidencias con los metadatos de red (IP, User-Agent), marcas de tiempo, hash del contrato y firmas.
-  - Firmar este PDF generado con el adaptador de firma y subirlo a MinIO en la ruta final persistente.
+### BUG-01 — HTTP 500 en creación de sesión KYC
+- **Endpoint:** `POST /api/v1/kyc/sessions`
+- **Error:** `bad SQL grammar [UPDATE kyc_sessions SET ... WHERE kyc_sessions.id = $5]`
+- **Causa:** R2DBC ejecuta UPDATE en lugar de INSERT porque `KycSessionEntity` tiene un UUID pre-asignado. Spring Data R2DBC interpreta entidades con ID como existentes.
+- **Afecta:** Todas las entidades (KycSessionEntity, ContractEntity, SignatureEntity, AuditTrailEntity)
+- **Fix:** Implementar `Persistable<UUID>` con campo `@Transient boolean isNew`
 
-### 4. Pruebas Automatizadas E2E y de Entorno Local Docker
-- **Problema:** Las pruebas de integración fallan en entornos sin un daemon de Docker compatible con Testcontainers (o en redes corporativas con proxy estricto que impiden descargar imágenes).
-- **Acción Requerida:**
-  - Crear un perfil de Maven alternativo (ej. `-P local-mock`) o usar perfiles de Spring Boot para desactivar el levantamiento de Testcontainers si se dispone de bases de datos de desarrollo locales ya activas en un `docker-compose`.
-  - Crear scripts de prueba con Postman / curl para validar los endpoints en vivo (documentado detalladamente en [DPS.md](file:///c:/Users/JoseSanchez3/OneDrive%20-%20EPAM/Documents/workspace_joselu/aegis-sign/DPS.md)).
+### BUG-02 — HTTP 200 vacío en lugar de 404
+- **Endpoints:** `GET /kyc/sessions/{id}`, `POST /signatures/prepare`, `POST /signatures/sign`
+- **Causa:** `repository.findById()` devuelve Mono vacío → `flatMap` no ejecuta → Mono vacío → Spring devuelve 200 sin body
+- **Fix:** `.switchIfEmpty(Mono.error(new ResourceNotFoundException(...)))` en adapters
+
+### BUG-03 — verifySession auto-aprueba en cada GET
+- **Endpoint:** `GET /api/v1/kyc/sessions/{id}`
+- **Causa:** `KycInteractor.verifySession()` muta estado → APPROVED y hace save() en cada llamada
+- **Fix:** Crear `getSession()` (solo lectura) separado de `verifySession()` (acción de negocio)
+
+### BUG-04 — signerId raw JSON en respuesta Signature
+- **Endpoint:** `POST /api/v1/signatures/sign`
+- **Causa:** `SignatureRepositoryAdapter.toDomain()` asigna `entity.getSignerInfo()` (JSON completo) a `signerId`
+- **Fix:** Parsear JSON y extraer campo `signerId`
+
+---
+
+## Funcionalidades no implementadas
+
+| ID | Feature | Prioridad | Bloquea |
+|---|---|---|---|
+| FEAT-01 | `POST /api/v1/contracts` — creación de contrato con PDF | Alta | Todo el flujo de firma |
+| FEAT-02 | `GET /api/v1/contracts/{id}` | Media | Consultas |
+| FEAT-03 | `GET /api/v1/signatures/{id}` | Media | Consultas |
+| FEAT-04 | `GET /api/v1/signatures?contractId={id}` | Media | Auditoría |
+| FEAT-05 | Integración OCR en `submitIdDocument` | Alta | RF-KYC-03 |
+| FEAT-06 | Integración biometría en `submitBiometrics` + `verifySession` | Alta | RF-KYC-05 |
+| FEAT-07 | PDF firmado del Audit Trail | Media | RF-SIG-04 completo |
+| FEAT-08 | KeyStore PKCS12 persistente | Media | Trazabilidad firma |
+| FEAT-09 | Tessdata en Dockerfile | Alta | OCR funcional en Docker |
+| FEAT-10 | signer_id como columna propia en kyc_sessions | Baja | Queries por usuario |
+
+---
+
+## Deuda técnica
+
+| ID | Descripción | Impacto |
+|---|---|---|
+| DEBT-01 | KycStatus: solo 3 estados vs 5 requeridos por GOAL.md | Estado incorrecto reportado |
+| DEBT-02 | ContractStatus: 3 estados vs 7 en DB | Mismatch dominio/persistencia |
+| DEBT-03 | JSONB en R2DBC sin converter personalizado | Posibles fallos con PostgreSQL strict JSONB |
+| DEBT-04 | Códigos HTTP incorrectos (201 vs 200 en creates) | No sigue REST estándar |
+| DEBT-05 | Sin validación de estado KYC en flujo de firma | Permite firmar sin KYC aprobado |
+| DEBT-06 | Sin paginación en futuros list endpoints | Escalabilidad |
+| DEBT-07 | Clave RSA efímera en cada reinicio | Firmas no verificables entre reinicios |
+
+---
+
+## Fases GOAL.md vs estado actual
+
+```
+Fase 1 (Capa de Datos y Documentos)
+  [OK]  Configuración DB + MinIO + Redis
+  [OK]  Motor PDF (PdfTemplateCompiler)
+  [!!!] No hay endpoint para crear contratos (POST /contracts)
+
+Fase 2 (Core Criptográfico)
+  [OK]  SHA-256 hashing implementado
+  [OK]  Firma X.509 con BouncyCastle
+  [!!!] KeyStore efímero (no persistente)
+  [!!!] PDF Audit Trail no se genera ni firma
+
+Fase 3 (Core KYC)
+  [OK]  Servicios OCR y biometría implementados como clases
+  [!!!] Servicios NO integrados en el flujo del caso de uso
+  [!!!] Sesión KYC no se puede crear (HTTP 500)
+
+Fase 4 (Orquestación y API)
+  [OK]  Rate limiting reactivo con Redis+Lua
+  [!!!] API incompleta (faltan endpoints CRUD)
+  [!!!] Eventos de dominio (KycApproved, ContractFullySigned) no publicados
+```

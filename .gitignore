@@ -49,3 +49,10 @@ docs/
 releases/
 logs/
 
+.claude/
+.codemie/
+.synthforge/
+.vscode/
+
+target/
+notes/correctivos/

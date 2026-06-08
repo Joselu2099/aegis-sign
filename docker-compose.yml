@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -12,12 +10,22 @@ services:
       POSTGRES_PASSWORD: aegis_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis_user -d aegis_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: aegis-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   minio:
     image: minio/minio:RELEASE.2024-03-30T09-41-56Z
@@ -31,6 +39,43 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: aegis-app
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/aegis_db
+      SPRING_R2DBC_USERNAME: aegis_user
+      SPRING_R2DBC_PASSWORD: aegis_password
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/aegis_db
+      SPRING_FLYWAY_USER: aegis_user
+      SPRING_FLYWAY_PASSWORD: aegis_password
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: aegis_admin
+      MINIO_SECRET_KEY: aegis_admin_password
+      MINIO_BUCKET: aegis-sign
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
 volumes:
   postgres_data:

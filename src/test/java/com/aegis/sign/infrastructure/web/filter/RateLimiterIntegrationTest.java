@@ -33,7 +33,7 @@ class RateLimiterIntegrationTest extends AbstractIntegrationTest {
         when(kycUseCase.createSession(anyString())).thenReturn(Mono.just(
                 KycSession.builder()
                         .id(UUID.randomUUID())
-                        .status(KycSession.KycStatus.PENDING)
+                        .status(KycSession.KycStatus.PENDING_DOCUMENTS)
                         .build()
         ));
     }

@@ -20,10 +20,15 @@ public class KycInteractor implements KycUseCase {
         KycSession session = KycSession.builder()
                 .id(UUID.randomUUID())
                 .signerId(signerId)
-                .status(KycSession.KycStatus.PENDING)
+                .status(KycSession.KycStatus.PENDING_DOCUMENTS)
                 .documentMetadata(new java.util.HashMap<>())
                 .build();
         return kycRepositoryPort.save(session);
+    }
+
+    @Override
+    public Mono<KycSession> getSession(UUID sessionId) {
+        return kycRepositoryPort.findById(sessionId);
     }
 
     @Override
@@ -41,8 +46,8 @@ public class KycInteractor implements KycUseCase {
     public Mono<KycSession> submitIdDocument(UUID sessionId, byte[] content) {
         return kycRepositoryPort.findById(sessionId)
                 .flatMap(session -> {
-                    // Specific logic for ID document ingestion
                     session.getDocumentMetadata().put("ID_DOCUMENT", "UPLOADED");
+                    session.setStatus(KycSession.KycStatus.PROCESSING);
                     return kycRepositoryPort.save(session);
                 });
     }
@@ -51,8 +56,8 @@ public class KycInteractor implements KycUseCase {
     public Mono<KycSession> submitBiometrics(UUID sessionId, byte[] content) {
         return kycRepositoryPort.findById(sessionId)
                 .flatMap(session -> {
-                    // Specific logic for biometric ingestion
                     session.getDocumentMetadata().put("BIOMETRICS", "UPLOADED");
+                    session.setStatus(KycSession.KycStatus.PROCESSING);
                     return kycRepositoryPort.save(session);
                 });
     }

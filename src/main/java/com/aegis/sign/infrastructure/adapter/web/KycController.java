@@ -26,7 +26,7 @@ public class KycController {
 
     @GetMapping("/{id}")
     public Mono<ApiResponse<KycSession>> getSession(@PathVariable UUID id) {
-        return kycUseCase.verifySession(id)
+        return kycUseCase.getSession(id)
                 .map(ApiResponse::success);
     }
 

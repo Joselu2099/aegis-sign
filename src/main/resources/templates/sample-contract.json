@@ -1,0 +1,9 @@
+{
+  "elements": [
+    { "type": "header", "text": "Contrato de Alquiler" },
+    { "type": "paragraph", "text": "Inquilino: {{tenant}}" },
+    { "type": "paragraph", "text": "Propietario: {{landlord}}" },
+    { "type": "paragraph", "text": "Importe mensual: {{amount}} EUR" },
+    { "type": "paragraph", "text": "Firmantes: {{signers}}" }
+  ]
+}
