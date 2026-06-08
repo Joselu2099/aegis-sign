@@ -1,19 +1,14 @@
 package com.aegis.sign.infrastructure.adapter.web;
 
-<<<<<<< HEAD
 import com.aegis.sign.domain.exception.KycTechnicalException;
 import com.aegis.sign.domain.exception.KycUserException;
-=======
 import com.aegis.sign.domain.exception.TemplateNotFoundException;
->>>>>>> sprint-2-tasks-01-09-domain-api
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.reactive.result.method.annotation.ResponseEntityExceptionHandler;
 import reactor.core.publisher.Mono;
-
-import java.time.LocalDateTime;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -37,12 +32,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(TemplateNotFoundException.class)
-    public Mono<ProblemDetail> handleTemplateNotFound(TemplateNotFoundException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-        problemDetail.setTitle("Template Not Found");
-        problemDetail.setType(URI.create("https://api.aegis-sign.com/errors/template-not-found"));
-        problemDetail.setProperty("timestamp", Instant.now());
-        return Mono.just(problemDetail);
+    public Mono<ResponseEntity<ApiResponse<Void>>> handleTemplateNotFound(TemplateNotFoundException ex) {
+        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage(), "TEMPLATE_NOT_FOUND")));
     }
 
     @ExceptionHandler(IllegalStateException.class)

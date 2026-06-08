@@ -106,9 +106,11 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
     }
 
     private String mapStatusToDb(KycSession.KycStatus status) {
-        if (status == null) return "CREATED";
+        if (status == null) return "PENDING_DOCUMENTS";
         return switch (status) {
-            case PENDING -> "CREATED";
+            case PENDING_DOCUMENTS -> "PENDING_DOCUMENTS";
+            case PROCESSING -> "PROCESSING";
+            case MANUAL_REVIEW -> "MANUAL_REVIEW";
             case APPROVED -> "APPROVED";
             case REJECTED -> "REJECTED";
             case MRZ_FAILED, BIOMETRIC_FAILED -> "FAILED";
@@ -116,16 +118,18 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
     }
 
     private KycSession.KycStatus mapStatusToDomain(String status, boolean mrzValid, boolean biometricValid) {
-        if (status == null) return KycSession.KycStatus.PENDING;
+        if (status == null) return KycSession.KycStatus.PENDING_DOCUMENTS;
         return switch (status) {
             case "APPROVED" -> KycSession.KycStatus.APPROVED;
             case "REJECTED" -> KycSession.KycStatus.REJECTED;
+            case "PROCESSING" -> KycSession.KycStatus.PROCESSING;
+            case "MANUAL_REVIEW" -> KycSession.KycStatus.MANUAL_REVIEW;
             case "FAILED" -> {
                 if (!mrzValid) yield KycSession.KycStatus.MRZ_FAILED;
                 if (!biometricValid) yield KycSession.KycStatus.BIOMETRIC_FAILED;
                 yield KycSession.KycStatus.REJECTED;
             }
-            default -> KycSession.KycStatus.PENDING;
+            default -> KycSession.KycStatus.PENDING_DOCUMENTS;
         };
     }
 }

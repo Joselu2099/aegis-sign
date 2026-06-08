@@ -1,5 +1,11 @@
 # aegis-sign — Task Backlog
-> Generado: 2026-06-08 | Base: project_status.md + análisis E2E
+> Generado: 2026-06-08 | Actualizado: 2026-06-08 post-merge sprint-2 | Base: project_status.md + análisis E2E
+
+## Estado del proyecto (2026-06-08 post-merge)
+- **Compilación:** ✅ JDK 21 (Microsoft OpenJDK 21.0.11)
+- **Tests:** ✅ 37/37 pasan · 0 fallos · Tests de integración (Docker) se saltan correctamente sin crash
+- **Merge conflicts resueltos:** `GlobalExceptionHandler.java` (imports KYC + Template)
+- **Bugs post-merge corregidos:** `KycStatus.PENDING→PENDING_DOCUMENTS`, `ContractEntity.signerIds` faltante, `KycInteractor` no implementaba `getSession()`, `SignatureServiceAdapter` no cerraba `InputStream` del keystore
 
 Leyenda prioridad: 🔴 CRÍTICA · 🟠 ALTA · 🟡 MEDIA · 🟢 BAJA  
 Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku** = claude-haiku-4-5
@@ -145,7 +151,8 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 ### TASK-10 · 🟡 MEDIA
 **FEAT-03: Implementar `GET /api/v1/signatures/{id}`**
 
-- **Fix:** Añadir caso de uso `getSignature()` en `SignatureInteractor`. Incluir `.switchIfEmpty(404)`.
+- **Fix:** Añadir caso de uso `getSignature()` en `SignatureInteractor` + handler `@GetMapping("/{id}")` en `SignatureController`. Incluir `.switchIfEmpty(404)`.
+- **Estado actual:** `SignatureController` solo tiene `/prepare` y `/sign`. Falta GET por ID.
 - **Modelo:** **Haiku**
 - **Skills:** `java-development-guide`, `realizar-correctivo`
 - **Criterio de éxito:** 200 con datos de firma, 404 si no existe.
@@ -157,6 +164,7 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 **FEAT-04: Implementar `GET /api/v1/signatures?contractId={id}`**
 
 - **Fix:** Query en `SignatureRepository` por `contractId`. Handler con paginación básica (ver DEBT-06).
+- **Estado actual:** No implementado.
 - **Modelo:** **Sonnet**
 - **Skills:** `java-development-guide`
 - **Criterio de éxito:** Devuelve lista de firmas para un contrato. 200 con array vacío si no hay firmas.
@@ -179,41 +187,38 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 
 ---
 
-### TASK-13 · 🟠 ALTA
+### TASK-13 · ✅ PARCIALMENTE COMPLETADA — 🟠 ALTA PENDIENTE TASK-12
 **FEAT-05: Integrar `OcrExtractorService` y `MrzValidationService` en `submitIdDocument`**
 
-- **Contexto:** Ambos servicios existen pero no son invocados desde `KycInteractor.submitIdDocument()`. El documento se guarda como "UPLOADED" sin validación.
-- **Flujo requerido:**
-  1. Subir documento a MinIO (ya existe parcialmente)
-  2. Llamar `OcrExtractorService.extract()` sobre el documento
-  3. Llamar `MrzValidationService.validate()` con resultado OCR
-  4. Si MRZ inválida → transición a estado de error KYC
-  5. Si válida → actualizar metadata sesión KYC con datos extraídos
-  6. Actualizar `KycStatus` a estado correspondiente (TASK-05)
-- **Archivos afectados:** `KycInteractor`, orquestación reactiva con `flatMap`/`zipWith`.
-- **Modelo:** **Opus** — lógica reactiva compleja, manejo de errores en pipeline WebFlux.
-- **Skills:** `java-development-guide`, `writing-plans`, `test-driven-development`, `verification-before-completion`
-- **Criterio de éxito:** `POST /kyc/sessions/{id}/documents` procesa OCR, valida MRZ, actualiza estado KYC.
-- **Depende de:** TASK-01, TASK-03, TASK-05, TASK-12
+- **Estado actual:** OCR+MRZ integrados en `KycInteractor.submitIdDocument()` (lógica TD1/TD2/TD3 completa). **Falta:** subida a MinIO del documento antes de OCR (requiere TASK-12 para tessdata en Docker).
+- **Completado en sprint-2:**
+  - `OcrExtractorService.extractData()` invocado sobre `content`
+  - `MrzValidationService.validateChecksum()` con validaciones TD1/TD2/TD3
+  - Transición a `KycStatus.MRZ_FAILED` si validación falla
+  - `BiometricValidationService` integrado en `submitBiometrics` (calidad, detección facial, liveness mock)
+  - Transición a `KycStatus.BIOMETRIC_FAILED` si validación biométrica falla
+- **Pendiente:** subir documento a MinIO + `BiometricMatchingService` (comparación real doc↔biometría) → ver TASK-14
+- **Criterio de éxito completo:** `POST /kyc/sessions/{id}/documents` procesa OCR, valida MRZ, sube a MinIO, actualiza estado KYC.
+- **Depende de:** TASK-12 (tessdata en Docker para OCR real)
 
 ---
 
 ### TASK-14 · 🟠 ALTA
 **FEAT-06: Integrar `BiometricMatchingService` en `submitBiometrics` y `verifySession`**
 
-- **Contexto:** `BiometricMatchingService` existe pero no se invoca. `verifySession` auto-aprueba sin lógica real.
-- **Flujo requerido en `submitBiometrics`:**
-  1. Subir imagen biométrica a MinIO
-  2. Recuperar imagen de documento ya subida (de MinIO o metadata)
-  3. Llamar `BiometricMatchingService.match(docImage, bioImage)`
-  4. Si score < umbral → transición a REJECTED
-  5. Si score >= umbral → transición a APPROVED (o estado intermedio)
-- **`verifySession` post-fix (TASK-03):** Solo debe ser llamado internamente tras biometría aprobada.
+- **Contexto:** `BiometricValidationService` (calidad imagen) integrado. Falta `BiometricMatchingService` (comparación facial doc↔foto).
+- **Estado actual:** `submitBiometrics` valida calidad, detecta cara mock, liveness mock. **No** compara contra imagen del documento.
+- **Flujo pendiente en `submitBiometrics`:**
+  1. Recuperar imagen de documento ya subida (de MinIO o metadata)
+  2. Llamar `BiometricMatchingService.match(docImage, bioImage)`
+  3. Si score < umbral → transición a REJECTED
+  4. Si score >= umbral → transición a APPROVED
+- **`verifySession`:** actualmente auto-aprueba. Debe llamarse solo internamente tras biometría aprobada.
 - **Archivos afectados:** `KycInteractor`, `BiometricMatchingService`, `KycRepositoryAdapter`.
 - **Modelo:** **Opus** — lógica de negocio crítica, pipeline reactivo multi-paso.
 - **Skills:** `java-development-guide`, `writing-plans`, `test-driven-development`, `verification-before-completion`
-- **Criterio de éxito:** `POST /kyc/sessions/{id}/biometrics` ejecuta comparación facial. Estado KYC refleja resultado real.
-- **Depende de:** TASK-01, TASK-03, TASK-05, TASK-13
+- **Criterio de éxito:** `POST /kyc/sessions/{id}/biometrics` ejecuta comparación facial real. Estado KYC refleja resultado.
+- **Depende de:** TASK-13
 
 ---
 
@@ -223,6 +228,7 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 **DEBT-05: Validar estado KYC aprobado antes de permitir firma**
 
 - **Causa:** `POST /api/v1/signatures/sign` no verifica que el firmante tenga sesión KYC en estado APPROVED. Permite firmar sin identidad verificada.
+- **Estado actual:** `SignatureInteractor.signContract()` no consulta KYC.
 - **Fix requerido:** En `SignatureInteractor.sign()`, consultar `KycRepository.findBySignerId()`, verificar `status == APPROVED`, lanzar error de negocio si no.
 - **Archivos afectados:** `SignatureInteractor`, puerto de salida KYC en dominio de firma.
 - **Modelo:** **Sonnet**
@@ -294,15 +300,18 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 
 ## BLOQUE 6 — Correcciones REST y deuda técnica menor
 
-### TASK-20 · 🟡 MEDIA
+### TASK-20 · 🟡 MEDIA — PARCIAL
 **DEBT-04: Corregir códigos HTTP en endpoints de creación (200 → 201)**
 
-- **Endpoints afectados:** `POST /kyc/sessions`, `POST /contracts`, `POST /signatures/sign` (si aplica).
-- **Fix:** Cambiar respuesta a `ResponseEntity.status(HttpStatus.CREATED).body(...)` o `.created(location).build()`.
+- **Estado actual:**
+  - `POST /contracts` ✅ ya tiene `@ResponseStatus(HttpStatus.CREATED)`
+  - `POST /kyc/sessions` ❌ devuelve 200 (falta `@ResponseStatus(CREATED)` en `KycController.createSession`)
+  - `POST /signatures/sign` — semánticamente es acción, 200 aceptable
+- **Fix pendiente:** Solo `KycController.createSession` necesita `@ResponseStatus(HttpStatus.CREATED)`.
 - **Modelo:** **Haiku**
 - **Skills:** `realizar-correctivo`
-- **Criterio de éxito:** Todos los endpoints POST de creación devuelven 201.
-- **Depende de:** TASK-01, TASK-08
+- **Criterio de éxito:** `POST /kyc/sessions` devuelve 201.
+- **Depende de:** TASK-01
 
 ---
 
@@ -360,27 +369,28 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 
 ---
 
-## Orden de ejecución recomendado
+## Orden de ejecución recomendado (estado actualizado 2026-06-08)
 
 ```
-Sprint 1 — Desbloquear stack
-  TASK-01 → TASK-02 → TASK-03 → TASK-04
-  TASK-18 (paralelo, independiente)
+✅ Sprint 1 — Desbloqueadores COMPLETOS
+  TASK-01 ✅ → TASK-02 ✅ → TASK-03 ✅ → TASK-04 ✅
 
-Sprint 2 — Dominio y API base
-  TASK-05 → TASK-06 → TASK-07
-  TASK-08 → TASK-09 → TASK-10 → TASK-11
+✅ Sprint 2 — Dominio y API base COMPLETOS
+  TASK-05 ✅ → TASK-06 ✅ → TASK-07 ✅
+  TASK-08 ✅ → TASK-09 ✅
+  TASK-18 (independiente, pendiente)
 
-Sprint 3 — KYC funcional
-  TASK-12 → TASK-13 → TASK-14
-  TASK-15 (paralelo con TASK-14)
+🔄 Sprint 3 — En curso
+  TASK-10 (pendiente) → TASK-11 (pendiente)
+  TASK-12 (pendiente) → TASK-14 (parcial: calidad OK, matching pendiente)
+  TASK-15 (pendiente, depende TASK-14)
 
 Sprint 4 — Firma completa
-  TASK-16 → TASK-17
-  TASK-19 (paralelo, independiente)
+  TASK-16 (pendiente) → TASK-17 (pendiente)
+  TASK-19 (independiente, pendiente)
 
 Sprint 5 — Pulido
-  TASK-20 → TASK-21 → TASK-22
+  TASK-20 (parcial) → TASK-21 → TASK-22
   TASK-23 → TASK-24
 ```
 
@@ -388,17 +398,17 @@ Sprint 5 — Pulido
 
 ## Resumen por modelo
 
-| Modelo | Tasks |
+| Modelo | Tasks pendientes |
 |--------|-------|
-| **Opus** | TASK-03, TASK-05, TASK-08, TASK-13, TASK-14, TASK-16, TASK-17, TASK-23, TASK-24 |
-| **Sonnet** | TASK-01, TASK-02, TASK-04, TASK-06, TASK-07, TASK-11, TASK-12, TASK-15, TASK-19 |
-| **Haiku** | TASK-09, TASK-10, TASK-18, TASK-20, TASK-21, TASK-22 |
+| **Opus** | TASK-14, TASK-16, TASK-17, TASK-23, TASK-24 |
+| **Sonnet** | TASK-11, TASK-12, TASK-15, TASK-19 |
+| **Haiku** | TASK-10, TASK-18, TASK-20 (parcial), TASK-21, TASK-22 |
 
 ## Resumen por prioridad
 
 | Prioridad | Count | Tasks |
 |-----------|-------|-------|
-| 🔴 CRÍTICA | 4 | TASK-01..04 |
-| 🟠 ALTA | 8 | TASK-05, 06, 08, 12, 13, 14, 15, 18, 23 |
-| 🟡 MEDIA | 8 | TASK-07, 09, 10, 11, 16, 17, 19, 20, 24 |
+| 🔴 CRÍTICA | 4 | TASK-01..04 ✅ todas completadas |
+| 🟠 ALTA | pendientes | TASK-12, TASK-14, TASK-15, TASK-18, TASK-23 |
+| 🟡 MEDIA | pendientes | TASK-10, TASK-11, TASK-16, TASK-17, TASK-19, TASK-20, TASK-24 |
 | 🟢 BAJA | 2 | TASK-21, 22 |

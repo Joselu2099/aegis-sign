@@ -8,7 +8,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -30,4 +29,7 @@ public class ContractEntity {
 
     @Column("minio_uri")
     private String minioUri;
+
+    @Column("signer_ids")
+    private String signerIds;
 }

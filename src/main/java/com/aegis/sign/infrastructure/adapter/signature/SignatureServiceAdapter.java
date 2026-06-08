@@ -61,7 +61,9 @@ public class SignatureServiceAdapter implements SignatureServicePort {
         try {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             Resource resource = resourceLoader.getResource(keystorePath);
-            keyStore.load(resource.getInputStream(), keystorePassword.toCharArray());
+            try (var is = resource.getInputStream()) {
+                keyStore.load(is, keystorePassword.toCharArray());
+            }
 
             this.privateKey = (PrivateKey) keyStore.getKey(keyAlias, keyPassword.toCharArray());
             this.certificateChain = keyStore.getCertificateChain(keyAlias);

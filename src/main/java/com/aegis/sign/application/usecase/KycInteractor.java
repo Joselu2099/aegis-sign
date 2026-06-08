@@ -29,11 +29,16 @@ public class KycInteractor implements KycUseCase {
         KycSession session = KycSession.builder()
                 .id(UUID.randomUUID())
                 .signerId(signerId)
-                .status(KycSession.KycStatus.PENDING)
+                .status(KycSession.KycStatus.PENDING_DOCUMENTS)
                 .documentMetadata(new java.util.HashMap<>())
-                .mrzValid(false) // Initialize MRZ validity
+                .mrzValid(false)
                 .build();
         return kycRepositoryPort.save(session);
+    }
+
+    @Override
+    public Mono<KycSession> getSession(UUID sessionId) {
+        return kycRepositoryPort.findById(sessionId);
     }
 
     @Override

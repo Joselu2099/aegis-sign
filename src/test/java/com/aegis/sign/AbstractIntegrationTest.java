@@ -1,6 +1,7 @@
 package com.aegis.sign;
 
 import com.redis.testcontainers.RedisContainer;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -9,6 +10,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -32,6 +35,8 @@ public abstract class AbstractIntegrationTest {
 
     protected WebTestClient webTestClient;
 
+    static boolean dockerAvailable = false;
+
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:15-alpine"));
 
     static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
@@ -44,9 +49,21 @@ public abstract class AbstractIntegrationTest {
 
     static {
         if (!Boolean.parseBoolean(System.getProperty("testcontainers.disabled"))) {
-            postgres.start();
-            redis.start();
-            minio.start();
+            try {
+                postgres.start();
+                redis.start();
+                minio.start();
+                dockerAvailable = true;
+            } catch (Exception e) {
+                // Docker not available — integration tests will be skipped
+            }
+        }
+    }
+
+    @BeforeAll
+    static void requireDocker() {
+        if (!Boolean.parseBoolean(System.getProperty("testcontainers.disabled"))) {
+            assumeTrue(dockerAvailable, "Skipping integration test: Docker not available");
         }
     }
 
