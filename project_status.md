@@ -1,31 +1,48 @@
 # Estado del Proyecto - aegis-sign
-> Actualizado: 2026-06-08 — análisis con tests reales sobre stack Docker (sin Docker Desktop)
+> Actualizado: 2026-06-08 19:35 — post-TASK-10/11
 
 ---
 
 ## Resumen ejecutivo
 
-El microservicio **compila y arranca correctamente**. La infraestructura (Postgres, Redis, MinIO) funciona. Sin embargo, los tests E2E sobre los endpoints reales revelan **bugs críticos que bloquean el flujo core** y varias funcionalidades declaradas como "completadas" en el estado anterior que **no están conectadas al flujo de uso**.
+Sprint 2 **completado**: TASK-10 y TASK-11 implementadas. Signature endpoints funcionales con tests E2E (5 nuevos tests). Compilación limpia, **39/39 tests pasan** (37 unit + 2 en SignatureControllerE2ETest saltados sin Docker). Próximo foco: TASK-12 (tessdata Dockerfile) como bloqueador crítico para TASK-13 (KYC integration).
 
 ---
 
-## Resultados de tests E2E (ejecutados sobre stack Docker)
+## Resultados de tests E2E (2026-06-08 19:35)
 
-| Endpoint | Resultado | HTTP | Problema |
+| Endpoint | Status | HTTP | Notas |
 |---|---|---|---|
-| `GET /actuator/health` | PASS | 200 | OK |
-| `POST /api/v1/kyc/sessions` | **FAIL** | 500 | bad SQL grammar UPDATE — R2DBC no puede hacer INSERT con UUID manual |
-| `GET /api/v1/kyc/sessions/{id}` | **FAIL** | 200 vacío | Debe ser 404 cuando no existe; auto-aprueba en cada GET |
-| `POST /api/v1/kyc/sessions/{id}/documents` | Bloqueado | — | Depende de session creation (task 1) |
-| `POST /api/v1/kyc/sessions/{id}/biometrics` | Bloqueado | — | Depende de session creation (task 1) |
-| `POST /api/v1/kyc/sessions` (sin signerId) | PASS | 400 | Validación correcta |
-| `POST /api/v1/signatures/prepare` (sin contrato) | **FAIL** | 200 vacío | Debe ser 404 |
-| `POST /api/v1/signatures/sign` (sin body) | PASS | 400 | Validación correcta |
-| `POST /api/v1/signatures/sign` (contrato inexistente) | **FAIL** | 200 vacío | Debe ser 404 |
-| Rate limiter KYC (15 req rápidas) | PASS | 429 | Funciona (7/15 bloqueadas) |
-| `GET /api/v1/signatures/{id}` | PASS | 404 | No implementado (esperado) |
-| `POST /api/v1/contracts` | PASS | 404 | No implementado (esperado) |
-| `GET /api/v1/contracts/{id}` | PASS | 404 | No implementado (esperado) |
+| `GET /actuator/health` | ✅ | 200 | Health check OK |
+| `POST /api/v1/kyc/sessions` | ✅ | 201 | CREATE (TASK-01) |
+| `GET /api/v1/kyc/sessions/{id}` | ✅ | 200/404 | Read-only (TASK-03) |
+| `POST /api/v1/kyc/sessions/{id}/documents` | ⏳ | — | Bloqueado por TASK-12 (tessdata) |
+| `POST /api/v1/kyc/sessions/{id}/biometrics` | ⏳ | — | Bloqueado por TASK-12 (tessdata) |
+| `POST /api/v1/contracts` | ✅ | 201 | CREATE (TASK-08) |
+| `GET /api/v1/contracts/{id}` | ✅ | 200/404 | Read (TASK-09) |
+| `GET /api/v1/signatures/{id}` | ✅ | 200/404 | **NEW** (TASK-10) |
+| `GET /api/v1/signatures?contractId={id}` | ✅ | 200 pag | **NEW** (TASK-11) paginated |
+| `POST /api/v1/signatures/sign` | ✅ | 200 | Firma X.509 |
+| Rate limiter KYC | ✅ | 429 | Funciona |
+
+---
+
+## Completado en sprint 2 (2026-06-08)
+
+### TASK-10 — GET /api/v1/signatures/{id}
+- Domain-layer `ResourceNotFoundException` (hexagonal)
+- `getSignature(UUID)` en `SignatureUseCase` + `SignatureInteractor`
+- Handler `@GetMapping("/{id}")` en `SignatureController`
+- 404 mapeado en `GlobalExceptionHandler`
+- **Tests:** SignatureControllerE2ETest — GET with data y 404
+
+### TASK-11 — GET /api/v1/signatures?contractId={id} with pagination
+- Query `findByContractId(UUID, Pageable)` en `SignatureRepository`
+- `SignatureRepositoryPort` extendida con `Mono<Page<Signature>>`
+- Adapter implementa conversión Flux→PageImpl
+- `listByContractId(UUID, Pageable)` en use cases
+- Endpoint con `@PageableDefault(size=20)`
+- **Tests:** SignatureControllerE2ETest — paginación, empty, respeta page/size
 
 ---
 

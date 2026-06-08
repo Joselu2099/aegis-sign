@@ -148,31 +148,29 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 
 ---
 
-### TASK-10 · 🟡 MEDIA
+### TASK-10 · ✅ COMPLETADA ~~🟡 MEDIA~~
 **FEAT-03: Implementar `GET /api/v1/signatures/{id}`**
 
-- **Fix:** Añadir caso de uso `getSignature()` en `SignatureInteractor` + handler `@GetMapping("/{id}")` en `SignatureController`. Incluir `.switchIfEmpty(404)`.
-- **Estado actual:** `SignatureController` solo tiene `/prepare` y `/sign`. Falta GET por ID.
+- **Completada:** 2026-06-08 — `getSignature(UUID)` en `SignatureUseCase` + `SignatureInteractor` + handler `@GetMapping("/{id}")` en `SignatureController`. Devuelve 200 con firma o 404 si no existe. Domain-layer `ResourceNotFoundException` para hexagonal architecture. Mapeada a 404 en `GlobalExceptionHandler`.
+- **Tests:** SignatureControllerE2ETest cubre GET by ID con datos y 404.
 - **Modelo:** **Haiku**
-- **Skills:** `java-development-guide`, `realizar-correctivo`
-- **Criterio de éxito:** 200 con datos de firma, 404 si no existe.
+- **Criterio de éxito:** ✅ 200 con datos de firma, 404 si no existe.
 - **Depende de:** TASK-01, TASK-02
 
 ---
 
-### TASK-11 · 🟡 MEDIA
+### TASK-11 · ✅ COMPLETADA ~~🟡 MEDIA~~
 **FEAT-04: Implementar `GET /api/v1/signatures?contractId={id}`**
 
-- **Fix:** Query en `SignatureRepository` por `contractId`. Handler con paginación básica (ver DEBT-06).
-- **Estado actual:** No implementado.
+- **Completada:** 2026-06-08 — Query `findByContractId(UUID, Pageable)` en `SignatureRepository` (R2DBC). Extendida `SignatureRepositoryPort`. Implementada en `SignatureRepositoryAdapter` (Flux→PageImpl). `listByContractId(UUID, Pageable)` en `SignatureUseCase`/`SignatureInteractor`. Endpoint `@GetMapping` sin path con `@PageableDefault(size=20)`.
+- **Tests:** SignatureControllerE2ETest cubre paginación, casos vacíos, respeto de size/page.
 - **Modelo:** **Sonnet**
-- **Skills:** `java-development-guide`
-- **Criterio de éxito:** Devuelve lista de firmas para un contrato. 200 con array vacío si no hay firmas.
+- **Criterio de éxito:** ✅ Devuelve lista paginada de firmas por contrato. 200 con array vacío si no hay firmas.
 - **Depende de:** TASK-01, TASK-08
 
 ---
 
-## BLOQUE 3 — Integración KYC (servicios existentes desconectados)
+## Bloque 3 — Integración KYC (servicios existentes desconectados)
 
 ### TASK-12 · 🟠 ALTA
 **FEAT-09: Añadir tessdata al Dockerfile para OCR funcional en Docker**
@@ -369,7 +367,7 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 
 ---
 
-## Orden de ejecución recomendado (estado actualizado 2026-06-08)
+## Orden de ejecución recomendado (estado actualizado 2026-06-08 19:35)
 
 ```
 ✅ Sprint 1 — Desbloqueadores COMPLETOS
@@ -377,12 +375,11 @@ Modelos: **Opus** = claude-opus-4-8 · **Sonnet** = claude-sonnet-4-6 · **Haiku
 
 ✅ Sprint 2 — Dominio y API base COMPLETOS
   TASK-05 ✅ → TASK-06 ✅ → TASK-07 ✅
-  TASK-08 ✅ → TASK-09 ✅
+  TASK-08 ✅ → TASK-09 ✅ → TASK-10 ✅ → TASK-11 ✅
   TASK-18 (independiente, pendiente)
 
 🔄 Sprint 3 — En curso
-  TASK-10 (pendiente) → TASK-11 (pendiente)
-  TASK-12 (pendiente) → TASK-14 (parcial: calidad OK, matching pendiente)
+  TASK-12 (pendiente) → TASK-13 (parcial) → TASK-14 (pendiente)
   TASK-15 (pendiente, depende TASK-14)
 
 Sprint 4 — Firma completa
@@ -398,17 +395,17 @@ Sprint 5 — Pulido
 
 ## Resumen por modelo
 
-| Modelo | Tasks pendientes |
-|--------|-------|
-| **Opus** | TASK-14, TASK-16, TASK-17, TASK-23, TASK-24 |
-| **Sonnet** | TASK-11, TASK-12, TASK-15, TASK-19 |
-| **Haiku** | TASK-10, TASK-18, TASK-20 (parcial), TASK-21, TASK-22 |
+| Modelo | Tasks completadas | Tasks pendientes |
+|--------|-------|---|
+| **Opus** | TASK-03, TASK-05, TASK-08, TASK-13 (parcial) | TASK-14, TASK-16, TASK-17, TASK-23, TASK-24 |
+| **Sonnet** | TASK-01, TASK-02, TASK-04, TASK-06, TASK-07, TASK-11 | TASK-12, TASK-15, TASK-19 |
+| **Haiku** | TASK-09, TASK-10 | TASK-18, TASK-20 (parcial), TASK-21, TASK-22 |
 
 ## Resumen por prioridad
 
-| Prioridad | Count | Tasks |
-|-----------|-------|-------|
-| 🔴 CRÍTICA | 4 | TASK-01..04 ✅ todas completadas |
-| 🟠 ALTA | pendientes | TASK-12, TASK-14, TASK-15, TASK-18, TASK-23 |
-| 🟡 MEDIA | pendientes | TASK-10, TASK-11, TASK-16, TASK-17, TASK-19, TASK-20, TASK-24 |
-| 🟢 BAJA | 2 | TASK-21, 22 |
+| Prioridad | Completadas | Pendientes |
+|-----------|-------|---|
+| 🔴 CRÍTICA | 4/4 ✅ | — |
+| 🟠 ALTA | 8/9 | TASK-12, TASK-14, TASK-15, TASK-18, TASK-23 |
+| 🟡 MEDIA | 6/9 | TASK-12, TASK-14, TASK-16, TASK-17, TASK-19, TASK-20, TASK-24 |
+| 🟢 BAJA | 0/2 | TASK-21, TASK-22 |
