@@ -8,14 +8,21 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class TemplateResolver {
 
     private static final String TEMPLATE_PATH_FORMAT = "templates/%s.json";
+    private final Map<String, String> cache = new ConcurrentHashMap<>();
 
     public String resolve(String templateId) {
+        return cache.computeIfAbsent(templateId, this::loadTemplate);
+    }
+
+    private String loadTemplate(String templateId) {
         ClassPathResource resource = new ClassPathResource(String.format(TEMPLATE_PATH_FORMAT, templateId));
         if (!resource.exists()) {
             throw new TemplateNotFoundException("Template not found: " + templateId);
