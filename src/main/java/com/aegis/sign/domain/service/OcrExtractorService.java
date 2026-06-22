@@ -27,6 +27,24 @@ import java.util.regex.Pattern;
 public class OcrExtractorService {
 
     private static final Logger log = LoggerFactory.getLogger(OcrExtractorService.class);
+
+    // TD3 (Passport) - 2 lines of 44 characters
+    private static final Pattern TD3_LINE_1_PATTERN = Pattern.compile("^P[A-Z0-9<]{1}[A-Z]{3}[A-Z0-9<]{39}$", Pattern.MULTILINE);
+    private static final Pattern TD3_LINE_2_PATTERN = Pattern.compile("^[A-Z0-9<]{9}[0-9]{1}[A-Z]{3}[0-9]{6}[0-9]{1}[M|F|<]{1}[0-9]{6}[0-9]{1}[A-Z0-9<]{14}[0-9]{1}[0-9]{1}$", Pattern.MULTILINE);
+
+    // TD1 (ID Card) - 3 lines of 30 characters
+    private static final Pattern TD1_LINE_1_PATTERN = Pattern.compile("^[I|A|C][A-Z0-9<]{1}[A-Z]{3}[A-Z0-9<]{9}[0-9]{1}[A-Z0-9<]{15}$", Pattern.MULTILINE);
+    private static final Pattern TD1_LINE_2_PATTERN = Pattern.compile("^[0-9]{6}[0-9]{1}[M|F|<]{1}[0-9]{6}[0-9]{1}[A-Z]{3}[A-Z0-9<]{11}[0-9]{1}$", Pattern.MULTILINE);
+    private static final Pattern TD1_LINE_3_PATTERN = Pattern.compile("^[A-Z0-9<]{30}$", Pattern.MULTILINE);
+
+    // TD2 (ID Card) - 2 lines of 36 characters
+    private static final Pattern TD2_LINE_1_PATTERN = Pattern.compile("^[I|A|C][A-Z0-9<]{1}[A-Z]{3}[A-Z0-9<]{31}$", Pattern.MULTILINE);
+    private static final Pattern TD2_LINE_2_PATTERN = Pattern.compile("^[A-Z0-9<]{9}[0-9]{1}[A-Z]{3}[0-9]{6}[0-9]{1}[M|F|<]{1}[0-9]{6}[0-9]{1}[A-Z0-9<]{7}[0-9]{1}$", Pattern.MULTILINE);
+
+    // Basic fields that might be present outside MRZ or as general fallback if no MRZ found
+    private static final Pattern DOC_NUM_PATTERN = Pattern.compile("[A-Z][0-9]{7}[A-Z0-9]");
+    private static final Pattern DATE_PATTERN = Pattern.compile("\\b\\d{6}\\b");
+
     private final ITesseract tesseract;
     private final ObservationRegistry observationRegistry;
 
@@ -95,30 +113,17 @@ public class OcrExtractorService {
             return;
         }
 
-        // TD3 (Passport) - 2 lines of 44 characters
-        Pattern td3Line1Pattern = Pattern.compile("^P[A-Z0-9<]{1}[A-Z]{3}[A-Z0-9<]{39}$", Pattern.MULTILINE);
-        Pattern td3Line2Pattern = Pattern.compile("^[A-Z0-9<]{9}[0-9]{1}[A-Z]{3}[0-9]{6}[0-9]{1}[M|F|<]{1}[0-9]{6}[0-9]{1}[A-Z0-9<]{14}[0-9]{1}[0-9]{1}$", Pattern.MULTILINE);
-
-        // TD1 (ID Card) - 3 lines of 30 characters
-        Pattern td1Line1Pattern = Pattern.compile("^[I|A|C][A-Z0-9<]{1}[A-Z]{3}[A-Z0-9<]{9}[0-9]{1}[A-Z0-9<]{15}$", Pattern.MULTILINE);
-        Pattern td1Line2Pattern = Pattern.compile("^[0-9]{6}[0-9]{1}[M|F|<]{1}[0-9]{6}[0-9]{1}[A-Z]{3}[A-Z0-9<]{11}[0-9]{1}$", Pattern.MULTILINE);
-        Pattern td1Line3Pattern = Pattern.compile("^[A-Z0-9<]{30}$", Pattern.MULTILINE);
-
-        // TD2 (ID Card) - 2 lines of 36 characters
-        Pattern td2Line1Pattern = Pattern.compile("^[I|A|C][A-Z0-9<]{1}[A-Z]{3}[A-Z0-9<]{31}$", Pattern.MULTILINE);
-        Pattern td2Line2Pattern = Pattern.compile("^[A-Z0-9<]{9}[0-9]{1}[A-Z]{3}[0-9]{6}[0-9]{1}[M|F|<]{1}[0-9]{6}[0-9]{1}[A-Z0-9<]{7}[0-9]{1}$", Pattern.MULTILINE);
-
         String[] lines = text.split("\\R"); // Split by any newline character
 
         // Attempt to find TD3
-        if (lines.length >= 2 && td3Line1Pattern.matcher(lines[0]).matches() && td3Line2Pattern.matcher(lines[1]).matches()) {
+        if (lines.length >= 2 && TD3_LINE_1_PATTERN.matcher(lines[0]).matches() && TD3_LINE_2_PATTERN.matcher(lines[1]).matches()) {
             fields.put("mrzType", "TD3");
             fields.put("mrzLine1", lines[0]);
             fields.put("mrzLine2", lines[1]);
             extractFieldsFromTD3(lines[1], fields);
         }
         // Attempt to find TD1
-        else if (lines.length >= 3 && td1Line1Pattern.matcher(lines[0]).matches() && td1Line2Pattern.matcher(lines[1]).matches() && td1Line3Pattern.matcher(lines[2]).matches()) {
+        else if (lines.length >= 3 && TD1_LINE_1_PATTERN.matcher(lines[0]).matches() && TD1_LINE_2_PATTERN.matcher(lines[1]).matches() && TD1_LINE_3_PATTERN.matcher(lines[2]).matches()) {
             fields.put("mrzType", "TD1");
             fields.put("mrzLine1", lines[0]);
             fields.put("mrzLine2", lines[1]);
@@ -126,7 +131,7 @@ public class OcrExtractorService {
             extractFieldsFromTD1(lines[0], lines[1], fields);
         }
         // Attempt to find TD2
-        else if (lines.length >= 2 && td2Line1Pattern.matcher(lines[0]).matches() && td2Line2Pattern.matcher(lines[1]).matches()) {
+        else if (lines.length >= 2 && TD2_LINE_1_PATTERN.matcher(lines[0]).matches() && TD2_LINE_2_PATTERN.matcher(lines[1]).matches()) {
             fields.put("mrzType", "TD2");
             fields.put("mrzLine1", lines[0]);
             fields.put("mrzLine2", lines[1]);
@@ -135,15 +140,13 @@ public class OcrExtractorService {
 
         // Basic fields that might be present outside MRZ or as general fallback if no MRZ found
         // Example regex for a Document Number (e.g., L898902C3)
-        Pattern docNumPattern = Pattern.compile("[A-Z][0-9]{7}[A-Z0-9]");
-        Matcher docNumMatcher = docNumPattern.matcher(text);
+        Matcher docNumMatcher = DOC_NUM_PATTERN.matcher(text);
         if (docNumMatcher.find() && !fields.containsKey("documentNumber")) { // Only if not already extracted from MRZ
             fields.put("documentNumber", docNumMatcher.group());
         }
 
         // Example regex for dates in YYMMDD format
-        Pattern datePattern = Pattern.compile("\\b\\d{6}\\b");
-        Matcher dateMatcher = datePattern.matcher(text);
+        Matcher dateMatcher = DATE_PATTERN.matcher(text);
         int dateCount = 0;
         while (dateMatcher.find()) {
             if (dateCount == 0 && !fields.containsKey("birthDate")) fields.put("birthDate", dateMatcher.group());
