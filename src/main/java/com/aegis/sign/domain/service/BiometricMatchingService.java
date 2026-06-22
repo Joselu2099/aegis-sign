@@ -154,15 +154,17 @@ public class BiometricMatchingService {
         g.dispose();
 
         // CHW format (Channels, Height, Width)
-        float[] floatValues = new float[3 * inputSize * inputSize];
-        for (int i = 0; i < inputSize; i++) {
-            for (int j = 0; j < inputSize; j++) {
-                int pixel = resized.getRGB(j, i);
-                // Simple normalization to [0, 1]
-                floatValues[0 * inputSize * inputSize + i * inputSize + j] = ((pixel >> 16) & 0xFF) / 255.0f;
-                floatValues[1 * inputSize * inputSize + i * inputSize + j] = ((pixel >> 8) & 0xFF) / 255.0f;
-                floatValues[2 * inputSize * inputSize + i * inputSize + j] = (pixel & 0xFF) / 255.0f;
-            }
+        int channelSize = inputSize * inputSize;
+        float[] floatValues = new float[3 * channelSize];
+        int[] pixels = new int[channelSize];
+        resized.getRGB(0, 0, inputSize, inputSize, pixels, 0, inputSize);
+
+        for (int i = 0; i < pixels.length; i++) {
+            int pixel = pixels[i];
+            // Simple normalization to [0, 1]
+            floatValues[i] = ((pixel >> 16) & 0xFF) / 255.0f;
+            floatValues[channelSize + i] = ((pixel >> 8) & 0xFF) / 255.0f;
+            floatValues[2 * channelSize + i] = (pixel & 0xFF) / 255.0f;
         }
 
         OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(floatValues), 
