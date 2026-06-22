@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -44,8 +45,13 @@ public class SignatureController {
 
     @PostMapping("/sign")
     public Mono<ApiResponse<Signature>> sign(@RequestBody SignRequest request,
-                                             @RequestHeader(value = "X-Forwarded-For", defaultValue = "127.0.0.1") String ipAddress,
+                                             ServerHttpRequest httpRequest,
                                              @RequestHeader(value = "User-Agent", defaultValue = "Unknown") String userAgent) {
+        String ipAddress = "127.0.0.1";
+        if (httpRequest.getRemoteAddress() != null && httpRequest.getRemoteAddress().getAddress() != null) {
+            ipAddress = httpRequest.getRemoteAddress().getAddress().getHostAddress();
+        }
+
         return signatureUseCase.signContract(
                 request.getContractId(),
                 request.getKycSessionId(),
