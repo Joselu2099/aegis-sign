@@ -66,6 +66,22 @@ class OcrExtractorServiceTest {
     }
 
     @Test
+    void shouldThrowTechnicalExceptionOnUnsatisfiedLinkError() throws TesseractException {
+        byte[] imageBytes = new byte[]{
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, (byte) 0x80, 0x00, 0x00, (byte) 0xff, (byte) 0xff, (byte) 0xff,
+            0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+            0x01, 0x00, 0x3b
+        };
+        when(tesseract.doOCR(any(BufferedImage.class))).thenThrow(new UnsatisfiedLinkError("Mocked native library missing"));
+
+        com.aegis.sign.domain.exception.KycTechnicalException exception = assertThrows(com.aegis.sign.domain.exception.KycTechnicalException.class, () -> {
+            ocrExtractorService.extractData(imageBytes);
+        });
+
+        assertEquals("OCR_ENGINE_DOWN", exception.getErrorCode());
+    }
+
+    @Test
     void shouldReturnEmptyMapForNullImage() {
         Map<String, String> results = ocrExtractorService.extractData(null);
         assertNotNull(results);
