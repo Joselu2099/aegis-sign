@@ -143,47 +143,31 @@ public class KycInteractor implements KycUseCase {
         return isValid;
     }
 
-    private boolean validateTD3Mrz(Map<String, String> ocrData, StringBuilder errorMessages) {
+    private boolean validateFieldChecksum(Map<String, String> ocrData, String fieldName, String fieldLabel, String tdType, StringBuilder errorMessages) {
+        String value = ocrData.get(fieldName);
+        String checkDigit = ocrData.get(fieldName + "CheckDigit");
+        if (value != null && checkDigit != null && checkDigit.length() == 1) {
+            if (!mrzValidationService.validateChecksum(value, checkDigit.charAt(0))) {
+                errorMessages.append(fieldLabel).append(" Check Digit invalid. ");
+                return false;
+            }
+            return true;
+        } else {
+            errorMessages.append("Missing ").append(fieldLabel).append(" or its check digit for ").append(tdType).append(" validation. ");
+            return false;
+        }
+    }
+
+    private boolean validateCommonMrzFields(Map<String, String> ocrData, String tdType, StringBuilder errorMessages) {
         boolean isValid = true;
+        isValid &= validateFieldChecksum(ocrData, "documentNumber", "Document Number", tdType, errorMessages);
+        isValid &= validateFieldChecksum(ocrData, "birthDate", "Birth Date", tdType, errorMessages);
+        isValid &= validateFieldChecksum(ocrData, "expiryDate", "Expiry Date", tdType, errorMessages);
+        return isValid;
+    }
 
-        // Document Number Check
-        String docNum = ocrData.get("documentNumber");
-        String docNumCheckDigit = ocrData.get("documentNumberCheckDigit");
-        if (docNum != null && docNumCheckDigit != null && docNumCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(docNum, docNumCheckDigit.charAt(0))) {
-                errorMessages.append("Document Number Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Document Number or its check digit for TD3 validation. ");
-            isValid = false;
-        }
-
-        // Birth Date Check
-        String birthDate = ocrData.get("birthDate");
-        String birthDateCheckDigit = ocrData.get("birthDateCheckDigit");
-        if (birthDate != null && birthDateCheckDigit != null && birthDateCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(birthDate, birthDateCheckDigit.charAt(0))) {
-                errorMessages.append("Birth Date Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Birth Date or its check digit for TD3 validation. ");
-            isValid = false;
-        }
-
-        // Expiry Date Check
-        String expiryDate = ocrData.get("expiryDate");
-        String expiryDateCheckDigit = ocrData.get("expiryDateCheckDigit");
-        if (expiryDate != null && expiryDateCheckDigit != null && expiryDateCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(expiryDate, expiryDateCheckDigit.charAt(0))) {
-                errorMessages.append("Expiry Date Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Expiry Date or its check digit for TD3 validation. ");
-            isValid = false;
-        }
+    private boolean validateTD3Mrz(Map<String, String> ocrData, StringBuilder errorMessages) {
+        boolean isValid = validateCommonMrzFields(ocrData, "TD3", errorMessages);
 
         // Personal Number Check (optional, but if present, validate)
         String personalNum = ocrData.get("personalNumber");
@@ -235,46 +219,7 @@ public class KycInteractor implements KycUseCase {
     }
 
     private boolean validateTD1Mrz(Map<String, String> ocrData, StringBuilder errorMessages) {
-        boolean isValid = true;
-
-        // Document Number Check
-        String docNum = ocrData.get("documentNumber");
-        String docNumCheckDigit = ocrData.get("documentNumberCheckDigit");
-        if (docNum != null && docNumCheckDigit != null && docNumCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(docNum, docNumCheckDigit.charAt(0))) {
-                errorMessages.append("Document Number Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Document Number or its check digit for TD1 validation. ");
-            isValid = false;
-        }
-
-        // Birth Date Check
-        String birthDate = ocrData.get("birthDate");
-        String birthDateCheckDigit = ocrData.get("birthDateCheckDigit");
-        if (birthDate != null && birthDateCheckDigit != null && birthDateCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(birthDate, birthDateCheckDigit.charAt(0))) {
-                errorMessages.append("Birth Date Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Birth Date or its check digit for TD1 validation. ");
-            isValid = false;
-        }
-
-        // Expiry Date Check
-        String expiryDate = ocrData.get("expiryDate");
-        String expiryDateCheckDigit = ocrData.get("expiryDateCheckDigit");
-        if (expiryDate != null && expiryDateCheckDigit != null && expiryDateCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(expiryDate, expiryDateCheckDigit.charAt(0))) {
-                errorMessages.append("Expiry Date Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Expiry Date or its check digit for TD1 validation. ");
-            isValid = false;
-        }
+        boolean isValid = validateCommonMrzFields(ocrData, "TD1", errorMessages);
 
         // Composite Checksum
         // For TD1, the composite check digit covers the entire first and second MRZ lines.
@@ -297,46 +242,7 @@ public class KycInteractor implements KycUseCase {
     }
 
     private boolean validateTD2Mrz(Map<String, String> ocrData, StringBuilder errorMessages) {
-        boolean isValid = true;
-
-        // Document Number Check
-        String docNum = ocrData.get("documentNumber");
-        String docNumCheckDigit = ocrData.get("documentNumberCheckDigit");
-        if (docNum != null && docNumCheckDigit != null && docNumCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(docNum, docNumCheckDigit.charAt(0))) {
-                errorMessages.append("Document Number Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Document Number or its check digit for TD2 validation. ");
-            isValid = false;
-        }
-
-        // Birth Date Check
-        String birthDate = ocrData.get("birthDate");
-        String birthDateCheckDigit = ocrData.get("birthDateCheckDigit");
-        if (birthDate != null && birthDateCheckDigit != null && birthDateCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(birthDate, birthDateCheckDigit.charAt(0))) {
-                errorMessages.append("Birth Date Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Birth Date or its check digit for TD2 validation. ");
-            isValid = false;
-        }
-
-        // Expiry Date Check
-        String expiryDate = ocrData.get("expiryDate");
-        String expiryDateCheckDigit = ocrData.get("expiryDateCheckDigit");
-        if (expiryDate != null && expiryDateCheckDigit != null && expiryDateCheckDigit.length() == 1) {
-            if (!mrzValidationService.validateChecksum(expiryDate, expiryDateCheckDigit.charAt(0))) {
-                errorMessages.append("Expiry Date Check Digit invalid. ");
-                isValid = false;
-            }
-        } else {
-            errorMessages.append("Missing Expiry Date or its check digit for TD2 validation. ");
-            isValid = false;
-        }
+        boolean isValid = validateCommonMrzFields(ocrData, "TD2", errorMessages);
 
         // Composite Checksum
         // For TD2, the composite check digit typically covers specific segments of line 2.
