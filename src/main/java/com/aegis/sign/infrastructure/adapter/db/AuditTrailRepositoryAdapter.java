@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -15,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
@@ -46,7 +48,7 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
             manifest = objectMapper.writeValueAsString(auditTrail.getEvents());
         } catch (JsonProcessingException e) {
             // handle
-            System.err.println("Error serializing audit trail events: " + e.getMessage());
+            log.error("Error serializing audit trail events", e);
         }
 
         return AuditTrailEntity.builder()
@@ -65,7 +67,7 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
             }
         } catch (JsonProcessingException e) {
             // handle
-            System.err.println("Error deserializing audit trail events: " + e.getMessage());
+            log.error("Error deserializing audit trail events", e);
         }
         return AuditTrail.builder()
                 .id(entity.getId())
