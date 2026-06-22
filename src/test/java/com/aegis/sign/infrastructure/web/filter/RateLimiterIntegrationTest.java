@@ -3,7 +3,6 @@ package com.aegis.sign.infrastructure.web.filter;
 import com.aegis.sign.AbstractIntegrationTest;
 import com.aegis.sign.application.ports.in.KycUseCase;
 import com.aegis.sign.domain.model.KycSession;
-import com.aegis.sign.infrastructure.adapter.web.ApiResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
