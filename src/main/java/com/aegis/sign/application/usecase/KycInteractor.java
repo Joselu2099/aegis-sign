@@ -108,10 +108,6 @@ public class KycInteractor implements KycUseCase {
                 });
     }
 
-    private String validationMetadata(BiometricValidationService.ValidationResult result) {
-        return result.getHeight() + "x" + result.getWidth();
-    }
-
     private boolean performMrzValidation(KycSession session, Map<String, String> ocrData) {
         String mrzType = ocrData.get("mrzType");
         if (mrzType == null || "NONE".equals(mrzType)) {
