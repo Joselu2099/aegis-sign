@@ -20,22 +20,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install native dependencies (Tesseract OCR)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr \
+            libtesseract-dev \
+            libleptonica-dev
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'microsoft'
+          distribution: 'temurin'
           cache: 'maven'
 
       - name: Build and Run Tests
         run: mvn clean test
+        env:
+          VAULT_TOKEN: dummy-ci-token
 
       - name: Generate Coverage Summary
         if: always()
         run: |
           if [ -f target/site/jacoco/jacoco.csv ]; then
             echo "### JaCoCo Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
-            # Sum up covered and missed instructions
             awk -F, 'NR > 1 { missed += $4; covered += $5 } END { total = missed + covered; if (total > 0) print "Instructions Coverage: " sprintf("%.2f%%", (covered / total) * 100); else print "No coverage data" }' target/site/jacoco/jacoco.csv >> $GITHUB_STEP_SUMMARY
           else
             echo "### JaCoCo Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
