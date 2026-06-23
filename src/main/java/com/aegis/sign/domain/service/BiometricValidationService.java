@@ -115,8 +115,12 @@ public class BiometricValidationService {
         long sum = 0;
         long sumSq = 0;
         int count = 0;
-        for (int x = 0; x < image.getWidth(); x += 10) {
-            for (int y = 0; y < image.getHeight(); y += 10) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        // Iterate y then x to maintain CPU cache locality when accessing image data.
+        for (int y = 0; y < height; y += 10) {
+            for (int x = 0; x < width; x += 10) {
                 int rgb = image.getRGB(x, y);
                 int r = (rgb >> 16) & 0xFF;
                 int g = (rgb >> 8) & 0xFF;
@@ -127,6 +131,7 @@ public class BiometricValidationService {
                 count++;
             }
         }
+
         if (count == 0) return 0.0;
         double mean = (double) sum / count;
         double variance = ((double) sumSq / count) - (mean * mean);
