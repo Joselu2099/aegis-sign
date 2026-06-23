@@ -56,10 +56,22 @@ public class SignatureRepositoryAdapter implements SignatureRepositoryPort {
         return Signature.builder()
                 .id(entity.getId())
                 .contractId(entity.getContractId())
-                .signerId(entity.getSignerInfo() != null ? entity.getSignerInfo().asString() : null)
+                .signerId(extractSignerId(entity.getSignerInfo()))
                 .certificateThumbprint(entity.getX509CertificateSn())
                 .timestamp(entity.getTimestamp())
                 .build();
+    }
+
+    private String extractSignerId(io.r2dbc.postgresql.codec.Json json) {
+        if (json == null) {
+            return null;
+        }
+        String str = json.asString();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\"signerId\"\\s*:\\s*\"([^\"]+)\"").matcher(str);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return str;
     }
 }
 
