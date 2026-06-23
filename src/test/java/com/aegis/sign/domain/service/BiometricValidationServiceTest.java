@@ -60,6 +60,28 @@ class BiometricValidationServiceTest {
         assertEquals("Invalid image format", result.getErrorMessage());
     }
 
+    @Test
+    void testValidate_LivenessFailed() throws IOException {
+        byte[] imageBytes = createMockImage(500, 500, Color.GRAY);
+
+        // Mutate the byte array until we get a failing liveness score (< 0.6)
+        byte[] mutated = imageBytes;
+        for (int j = 0; j < 100; j++) {
+            mutated = java.util.Arrays.copyOf(imageBytes, imageBytes.length + j);
+            int mhash = java.util.Arrays.hashCode(mutated);
+            double mliveness = 0.5 + (Math.abs(mhash % 40) / 100.0);
+            if (mliveness < 0.6) {
+                break;
+            }
+        }
+
+        BiometricValidationService.ValidationResult result = service.validate(mutated);
+
+        assertFalse(result.isValid());
+        assertEquals("LIVENESS_FAILED", result.getErrorCode());
+        assertTrue(result.getErrorMessage().contains("Liveness check failed"));
+    }
+
     private byte[] createMockImage(int width, int height, Color color) throws IOException {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = image.createGraphics();
