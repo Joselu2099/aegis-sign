@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class KycRepositoryAdapter implements KycRepositoryPort {
@@ -46,7 +48,7 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
             data.put("biometricValidationErrorMessage", session.getBiometricValidationErrorMessage());
             extractedData = objectMapper.writeValueAsString(data);
         } catch (JsonProcessingException e) {
-            // Log error
+            log.error("Failed to serialize KYC session data", e);
         }
 
         return KycSessionEntity.builder()
@@ -87,7 +89,7 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
                     }
                 }
             } catch (JsonProcessingException e) {
-                // Log error
+                log.error("Failed to deserialize KYC session data", e);
             }
         }
 
