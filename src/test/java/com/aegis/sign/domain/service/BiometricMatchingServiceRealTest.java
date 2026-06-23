@@ -7,7 +7,20 @@ import reactor.test.StepVerifier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(classes = BiometricMatchingService.class)
+@SpringBootTest(
+    classes = BiometricMatchingService.class,
+    properties = {
+        "spring.cloud.vault.enabled=false",
+        "spring.config.import=",
+        "keystore.path=classpath:test-keystore.p12",
+        "keystore.password=changeit",
+        "keystore.alias=aegis-sign",
+        "keystore.key-password=changeit",
+        "biometrics.model-path=src/main/resources/models/face_embedding.onnx",
+        "biometrics.match-threshold=0.8",
+        "biometrics.input-size=112"
+    }
+)
 class BiometricMatchingServiceRealTest {
 
     @Autowired

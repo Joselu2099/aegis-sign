@@ -17,6 +17,7 @@ Thumbs.db
 .classpath
 .factorypath
 .metadata/
+bin/
 
 # VS Code
 .vscode/
@@ -27,6 +28,7 @@ application-local.properties
 application-local.yml
 *.jks
 *.p12
+!src/test/resources/test-keystore.p12
 *.pem
 *.key
 

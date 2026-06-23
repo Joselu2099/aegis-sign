@@ -77,10 +77,10 @@ tesseract:
   datapath: /usr/share/tesseract-ocr/5/tessdata
 
 keystore:
-  path: classpath:keystore.p12
-  password: ${keystore.password}
-  alias: aegis-sign
-  key-password: ${keystore.key-password}
+  path: classpath:test-keystore.p12
+  password: ${keystore.password:changeit}
+  alias: ${keystore.alias:aegis-sign}
+  key-password: ${keystore.key-password:changeit}
 
 biometrics:
   model-path: src/main/resources/models/face_embedding.onnx
