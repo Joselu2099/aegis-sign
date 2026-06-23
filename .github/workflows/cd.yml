@@ -84,7 +84,7 @@ jobs:
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           TAG="v$VERSION"
-          git tag "$TAG"
+          git tag -a "$TAG" -m "Release $TAG"
           git push origin "$TAG"
 
       - name: Build JAR with Maven
@@ -98,6 +98,7 @@ jobs:
           files: target/*.jar
           draft: false
           prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -130,5 +131,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ env.REPO_LOWER }}:${{ needs.check-version.outputs.version }}
+            ghcr.io/${{ env.REPO_LOWER }}:v${{ needs.check-version.outputs.version }}
             ghcr.io/${{ env.REPO_LOWER }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
