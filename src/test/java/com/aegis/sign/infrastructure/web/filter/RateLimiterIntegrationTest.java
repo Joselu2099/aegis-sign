@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "rate-limit.kyc.capacity=2",
-    "rate-limit.kyc.refill-rate=1",
+    "rate-limit.kyc.refill-rate=0",
     "spring.cloud.vault.enabled=false",
     "spring.config.import=",
     "db.username=test",

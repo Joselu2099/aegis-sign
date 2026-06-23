@@ -5,6 +5,7 @@ import com.aegis.sign.domain.port.ContractRepositoryPort;
 import com.aegis.sign.infrastructure.adapter.web.ResourceNotFoundException;
 import com.aegis.sign.infrastructure.adapter.db.entity.ContractEntity;
 import com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository;
+import io.r2dbc.postgresql.codec.Json;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,7 +48,7 @@ public class ContractRepositoryAdapter implements ContractRepositoryPort {
                 .status(contract.getStatus().name())
                 .documentHashSha256(contract.getContentHash())
                 .minioUri(contract.getUri())
-                .signerIds(serializeSignerIds(contract.getSignerIds()))
+                .signerIds(Json.of(serializeSignerIds(contract.getSignerIds())))
                 .build();
     }
 
@@ -58,7 +59,7 @@ public class ContractRepositoryAdapter implements ContractRepositoryPort {
                 .status(Contract.ContractStatus.valueOf(entity.getStatus()))
                 .contentHash(entity.getDocumentHashSha256())
                 .uri(entity.getMinioUri())
-                .signerIds(deserializeSignerIds(entity.getSignerIds()))
+                .signerIds(deserializeSignerIds(entity.getSignerIds() != null ? entity.getSignerIds().asString() : null))
                 .build();
     }
 
