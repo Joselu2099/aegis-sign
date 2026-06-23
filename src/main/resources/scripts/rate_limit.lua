@@ -24,6 +24,10 @@ if tokens >= requested then
 end
 
 redis.call('hmset', key, 'tokens', tokens, 'lastRefillTimestamp', now)
-redis.call('expire', key, math.ceil(capacity / refillRate) + 10)
+local expireTime = 3600
+if refillRate > 0 then
+    expireTime = math.ceil(capacity / refillRate) + 10
+end
+redis.call('expire', key, expireTime)
 
 return allowed

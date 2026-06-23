@@ -35,10 +35,11 @@ public class SignatureRepositoryAdapter implements SignatureRepositoryPort {
     public Mono<Page<Signature>> findByContractId(UUID contractId, Pageable pageable) {
         return repository.findByContractId(contractId, pageable)
                 .collectList()
-                .map(entities -> new PageImpl<>(
-                        entities.stream().map(this::toDomain).toList(),
+                .zipWith(repository.countByContractId(contractId))
+                .map(tuple -> new PageImpl<>(
+                        tuple.getT1().stream().map(this::toDomain).toList(),
                         pageable,
-                        entities.size()
+                        tuple.getT2()
                 ));
     }
 
