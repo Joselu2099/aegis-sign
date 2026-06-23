@@ -1,20 +1,26 @@
 package com.aegis.sign.domain.service;
 
 import com.aegis.sign.domain.exception.TemplateNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
-
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TemplateResolverTest {
 
-    private final TemplateResolver resolver = new TemplateResolver();
+    private TemplateResolver resolver;
+
+    @BeforeEach
+    void setUp() {
+        resolver = new TemplateResolver();
+    }
 
     @Test
     void resolve_validTemplate_returnsContent() {
@@ -40,5 +46,17 @@ class TemplateResolverTest {
                     .hasMessage("Failed to read template: some-template")
                     .hasCauseInstanceOf(IOException.class);
         }
+    }
+
+    @Test
+    void shouldResolveExistingTemplate() {
+        String result = resolver.resolve("sample-contract");
+        assertNotNull(result);
+        assertTrue(result.contains("Contrato de Alquiler"));
+    }
+
+    @Test
+    void shouldThrowExceptionForMissingTemplate() {
+        assertThrows(TemplateNotFoundException.class, () -> resolver.resolve("non-existing-template"));
     }
 }
