@@ -19,8 +19,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.security.SecureRandom;
 import java.util.Collections;
-import java.util.Random;
 
 /**
  * Service for biometric matching and verification using ONNX Runtime.
@@ -41,7 +41,7 @@ public class BiometricMatchingService {
 
     private OrtEnvironment env;
     private OrtSession session;
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
 
     @PostConstruct
     public void init() {
