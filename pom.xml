@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.aegis</groupId>
 	<artifactId>sign</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<name>aegis-sign</name>
 	<description>Self-hosted Identity Verification and Electronic Signature Service</description>
 	<properties>
