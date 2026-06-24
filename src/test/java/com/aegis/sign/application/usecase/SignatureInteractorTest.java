@@ -9,6 +9,8 @@ import com.aegis.sign.domain.port.SignatureRepositoryPort;
 import com.aegis.sign.domain.port.SignatureServicePort;
 import com.aegis.sign.domain.port.EncryptionPort;
 import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.port.KycRepositoryPort;
+import com.aegis.sign.domain.model.KycSession;
 import com.aegis.sign.domain.service.PdfTemplateCompiler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import reactor.test.StepVerifier;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +45,8 @@ class SignatureInteractorTest {
     private PdfTemplateCompiler pdfTemplateCompiler;
     @Mock
     private StoragePort storagePort;
+    @Mock
+    private KycRepositoryPort kycRepositoryPort;
 
     private SignatureInteractor signatureInteractor;
 
@@ -54,7 +59,8 @@ class SignatureInteractorTest {
                 auditTrailRepositoryPort,
                 encryptionPort,
                 pdfTemplateCompiler,
-                storagePort
+                storagePort,
+                kycRepositoryPort
         );
 
         // Mock encryptionPort.encrypt behavior for existing tests
@@ -83,6 +89,13 @@ class SignatureInteractorTest {
                 .build();
 
         when(contractRepositoryPort.findById(contractId)).thenReturn(Mono.just(contract));
+        when(kycRepositoryPort.findById(kycSessionId)).thenReturn(Mono.just(KycSession.builder()
+                .id(kycSessionId)
+                .faceMatchScore(0.95)
+                .mrzValid(true)
+                .mrzValidationErrorMessage(null)
+                .documentMetadata(Map.of("docType", "passport"))
+                .build()));
         when(signatureServicePort.sign(contentHash, certThumbprint)).thenReturn(Mono.just(signatureHash));
         when(signatureRepositoryPort.save(any(Signature.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
         when(contractRepositoryPort.save(any(Contract.class))).thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
@@ -101,9 +114,13 @@ class SignatureInteractorTest {
                 .verifyComplete();
 
         verify(contractRepositoryPort).save(argThat(c -> c.getStatus() == Contract.ContractStatus.SIGNED));
-        verify(auditTrailRepositoryPort).save(argThat(at -> 
-            at.getContractId().equals(contractId) && 
+        verify(auditTrailRepositoryPort).save(argThat(at ->
+            at.getContractId().equals(contractId) &&
             at.getKycSessionId().equals(kycSessionId) &&
+            at.getOcrMrzResults().contains("MRZ Valid: true") &&
+            at.getBiometricScore().equals(0.95) &&
+            at.getPreSignatureHash().equals(contentHash) &&
+            at.getPostSignatureHash().equals(signatureHash) &&
             at.getEvents().size() == 1 &&
             at.getEvents().get(0).getIpAddress().equals(ip) &&
             at.getEvents().get(0).getUserAgent().equals(ua)
@@ -145,7 +162,7 @@ class SignatureInteractorTest {
                 .verifyComplete();
 
         verify(auditTrailRepositoryPort).findByContractId(contractId);
-        verify(pdfTemplateCompiler).compile(eq("audit-trail-template"), anyMap());
+        verify(pdfTemplateCompiler).compile(anyString(), anyMap());
         verify(signatureServicePort).signPdf(unsignedPdf);
         verify(storagePort).upload(eq(signedPdf), contains(contractId.toString()));
     }

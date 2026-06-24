@@ -1,0 +1,36 @@
+{
+  "elements": [
+    {
+      "type": "header",
+      "text": "Audit Trail Report - Session {{kycSessionId}}"
+    },
+    {
+      "type": "paragraph",
+      "text": "Contract ID: {{contractId}}"
+    },
+    {
+      "type": "paragraph",
+      "text": "OCR/MRZ Results: {{ocrMrzResults}}"
+    },
+    {
+      "type": "paragraph",
+      "text": "Biometric Score: {{biometricScore}}"
+    },
+    {
+      "type": "paragraph",
+      "text": "Pre-Signature Hash: {{preSignatureHash}}"
+    },
+    {
+      "type": "paragraph",
+      "text": "Post-Signature Hash: {{postSignatureHash}}"
+    },
+    {
+      "type": "paragraph",
+      "text": "--- Events ---"
+    },
+    {
+      "type": "paragraph",
+      "text": "{{events}}"
+    }
+  ]
+}

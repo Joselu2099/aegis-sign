@@ -63,6 +63,11 @@ class RateLimiterIntegrationTest extends AbstractIntegrationTest {
         });
 
         // 3rd request should be rate limited
+        try {
+            Thread.sleep(1100); // Wait for refillRate (1 second + buffer)
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         webTestClient.post()
                 .uri(kycUrl)
                 .exchange()
