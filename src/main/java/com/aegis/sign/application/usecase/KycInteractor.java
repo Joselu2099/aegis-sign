@@ -2,8 +2,10 @@ package com.aegis.sign.application.usecase;
 
 import com.aegis.sign.application.ports.in.KycUseCase;
 import com.aegis.sign.domain.model.KycSession;
+import com.aegis.sign.domain.model.MatchResult;
 import com.aegis.sign.domain.port.KycRepositoryPort;
 import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.service.BiometricMatchingService;
 import com.aegis.sign.domain.service.BiometricValidationService;
 import com.aegis.sign.domain.service.MrzValidationService;
 import com.aegis.sign.domain.service.OcrExtractorService;
@@ -23,6 +25,7 @@ public class KycInteractor implements KycUseCase {
     private final OcrExtractorService ocrExtractorService;
     private final MrzValidationService mrzValidationService;
     private final BiometricValidationService biometricValidationService;
+    private final BiometricMatchingService biometricMatchingService;
 
     @Override
     public Mono<KycSession> createSession(String signerId) {
@@ -74,7 +77,12 @@ public class KycInteractor implements KycUseCase {
 
                     // Specific logic for ID document ingestion
                     session.getDocumentMetadata().put("ID_DOCUMENT", "UPLOADED");
-                    return kycRepositoryPort.save(session);
+                    String idDocumentPath = "documents/" + sessionId + "/id";
+                    return storagePort.uploadTempFile(content, idDocumentPath)
+                            .flatMap(path -> {
+                                session.getDocumentMetadata().put("ID_DOCUMENT_PATH", path);
+                                return kycRepositoryPort.save(session);
+                            });
                 });
     }
 
@@ -98,13 +106,41 @@ public class KycInteractor implements KycUseCase {
                                 .flatMap(savedSession -> Mono.error(new com.aegis.sign.domain.exception.KycUserException(validationResult.getErrorMessage(), validationResult.getErrorCode() != null ? validationResult.getErrorCode() : "BIOMETRIC_VALIDATION_FAILED")));
                     }
 
-                    // 2. Upload to storage if valid
-                    String biometricFilePath = "biometrics/" + sessionId.toString() + "/" + UUID.randomUUID().toString();
-                    return storagePort.uploadTempFile(content, biometricFilePath)
-                            .flatMap(path -> {
-                                session.getDocumentMetadata().put("BIOMETRICS", path);
-                                return kycRepositoryPort.save(session);
-                            });
+                    // 2. Compare selfie against the document face (1:1 facial match)
+                    String idDocumentPath = session.getDocumentMetadata().get("ID_DOCUMENT_PATH");
+                    if (idDocumentPath == null) {
+                        session.setBiometricValidationErrorMessage("No identity document on file to match against.");
+                        session.setStatus(KycSession.KycStatus.BIOMETRIC_FAILED);
+                        return kycRepositoryPort.save(session)
+                                .flatMap(savedSession -> Mono.error(new com.aegis.sign.domain.exception.KycUserException(
+                                        session.getBiometricValidationErrorMessage(), "ID_DOCUMENT_MISSING")));
+                    }
+
+                    return storagePort.download(idDocumentPath)
+                            .flatMap(documentFace -> biometricMatchingService.match(documentFace, content))
+                            .flatMap(matchResult -> handleFaceMatchResult(session, content, matchResult));
+                });
+    }
+
+    private Mono<KycSession> handleFaceMatchResult(KycSession session, byte[] selfieContent, MatchResult matchResult) {
+        session.setFaceMatchScore(matchResult.getSimilarityScore());
+        session.getDocumentMetadata().put("FACE_MATCH_SCORE", String.valueOf(matchResult.getSimilarityScore()));
+        session.getDocumentMetadata().put("LIVENESS_SCORE_MATCH", String.valueOf(matchResult.getLivenessScore()));
+
+        if (!matchResult.isMatch()) {
+            session.setBiometricValidationErrorMessage("Facial match score below the acceptance threshold.");
+            session.setStatus(KycSession.KycStatus.BIOMETRIC_FAILED);
+            return kycRepositoryPort.save(session)
+                    .flatMap(savedSession -> Mono.error(new com.aegis.sign.domain.exception.KycUserException(
+                            session.getBiometricValidationErrorMessage(), "FACE_MATCH_FAILED")));
+        }
+
+        // Upload selfie to storage now that quality, liveness and face match all passed
+        String biometricFilePath = "biometrics/" + session.getId() + "/" + UUID.randomUUID();
+        return storagePort.uploadTempFile(selfieContent, biometricFilePath)
+                .flatMap(path -> {
+                    session.getDocumentMetadata().put("BIOMETRICS", path);
+                    return kycRepositoryPort.save(session);
                 });
     }
 
