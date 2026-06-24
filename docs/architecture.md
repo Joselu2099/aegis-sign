@@ -58,6 +58,6 @@ graph TD
 ---
 
 ### Context & Navigation
-- [GEMINI.md](../../GEMINI.md)
-- [business_logic.md](business_logic.md)
+- [GEMINI.md](../GEMINI.md)
+- [business-logic.md](business-logic.md)
 - [database.md](database.md)

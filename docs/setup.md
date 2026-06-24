@@ -82,6 +82,7 @@ After completing these steps, the application will be able to start successfully
 ---
 
 ### Context & Navigation
-- [GEMINI.md](GEMINI.md)
-- [AGENTS.md](AGENTS.md)
-- [context/architecture.md](context/architecture.md)
+- [GEMINI.md](../GEMINI.md)
+- [AGENTS.md](../AGENTS.md)
+- [architecture.md](architecture.md)
+- [api-guide.md](api-guide.md)

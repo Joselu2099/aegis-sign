@@ -57,3 +57,10 @@ Este componente formará parte fundamental del ecosistema de la aplicación de c
 * **Fase 2 (Core Criptográfico de Firma):** Implementación del hashing SHA-256, lógica de sellado digital con certificados X.509 y generación del Audit Trail.
 * **Fase 3 (Core KYC):** Integración de los componentes de extracción OCR y validación facial estática.
 * **Fase 4 (Orquestación y Eventos):** Exposición de la API REST limpia hacia el API Gateway y publicación de eventos en el bróker central de la aplicación (ej. `KycApproved`, `ContractFullySigned`).
+
+---
+
+### Context & Navigation
+- [GEMINI.md](../GEMINI.md)
+- [requirements.md](requirements.md)
+- [status.md](status.md)

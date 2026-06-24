@@ -159,3 +159,11 @@ Este documento detalla los requisitos funcionales, no funcionales y de integraci
     *   **Unit Tests:** 17 pruebas unitarias de servicios de dominio, casos de uso e interactores ejecutadas y superadas con éxito.
     *   **Architecture Tests:** Pruebas de cumplimiento de la arquitectura con ArchUnit ejecutadas y superadas con éxito.
     *   **Integration Tests:** Pruebas de integración E2E implementadas (`SignatureControllerIntegrationTest`), pero pendientes de ejecución debido a la falta de un entorno Docker activo local para Testcontainers.
+
+---
+
+### Context & Navigation
+- [GEMINI.md](../GEMINI.md)
+- [goal.md](goal.md)
+- [status.md](status.md)
+- [business-logic.md](business-logic.md)

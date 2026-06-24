@@ -257,3 +257,11 @@ La firma de un contrato genera una entrada inmutable en la tabla `audit_trails`.
 - **`final_signed_pdf_uri`:** Ubicación del PDF inmutable firmado dentro de MinIO.
 
 Esto garantiza el no repudio de la firma y el cumplimiento de normativas de firma electrónica.
+
+---
+
+### Context & Navigation
+- [README.md](../README.md)
+- [architecture.md](architecture.md)
+- [business-logic.md](business-logic.md)
+- [requirements.md](requirements.md)

@@ -5,23 +5,28 @@ This file acts as the central navigation hub for the repository. Refer to the sp
 ## Core Documentation
 
 - **[AGENTS.md](AGENTS.md)**: Rules, workflows, and programming guidelines.
-- **[system.md](system.md)**: Installation, environment setup, and repository overview.
+- **[docs/setup.md](docs/setup.md)**: Installation, environment setup, and repository overview.
+- **[docs/api-guide.md](docs/api-guide.md)**: API reference, request/response examples, and integration flow.
 
 ## Project Context
 
-Detailed technical context is located in `context/`:
-- **Architecture**: `context/architecture.md`
-- **Business Logic**: `context/business_logic.md`
-- **Database**: `context/database.md`
+Detailed technical context is located in `docs/`:
+- **Architecture**: `docs/architecture.md`
+- **Business Logic**: `docs/business-logic.md`
+- **Database**: `docs/database.md`
+- **Requirements (RF/RNF)**: `docs/requirements.md`
+- **Original Goal/Spec**: `docs/goal.md`
 
-## Memory & Notes
+## Status & Memory
 
 Operational notes and active tracking:
-- **Project Memory**: `notes/memory.md`
+- **Current Project Status**: `docs/status.md`
+- **Project Memory**: `docs/memory.md`
+- **Historical Status Snapshots**: `docs/history/`
 
 ---
 
 ### Context & Navigation
 - [AGENTS.md](AGENTS.md)
-- [system.md](system.md)
-- [context/architecture.md](context/architecture.md)
+- [docs/setup.md](docs/setup.md)
+- [docs/architecture.md](docs/architecture.md)

@@ -23,5 +23,5 @@ Process: `brainstorming` -> `writing-plans` -> `executing-plans`
 
 ### Context & Navigation
 - [GEMINI.md](GEMINI.md)
-- [system.md](system.md)
-- [context/architecture.md](context/architecture.md)
+- [docs/setup.md](docs/setup.md)
+- [docs/architecture.md](docs/architecture.md)

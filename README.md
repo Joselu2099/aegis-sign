@@ -168,3 +168,23 @@ El proyecto utiliza Maven (o Gradle, según convención interna) para el ciclo d
    ```
 
 El servicio estará disponible en `http://localhost:8080` (o el puerto configurado por defecto en `application.yml`).
+
+---
+
+## 7. Documentación Completa
+
+Este README cubre la visión general. El resto de documentación vive en [`docs/`](docs/):
+
+| Documento | Contenido |
+| :--- | :--- |
+| [docs/setup.md](docs/setup.md) | Instalación, Docker Compose, gestión de secretos con HashiCorp Vault |
+| [docs/api-guide.md](docs/api-guide.md) | Referencia de API con ejemplos de request/response y diagrama de secuencia E2E |
+| [docs/architecture.md](docs/architecture.md) | Arquitectura hexagonal y distribución de capas |
+| [docs/business-logic.md](docs/business-logic.md) | Glosario de dominio, modelo de objetos y reglas de negocio |
+| [docs/database.md](docs/database.md) | Modelo de datos, ERD y patrones de consulta |
+| [docs/requirements.md](docs/requirements.md) | Matriz de requisitos funcionales/no funcionales (RF/RNF) |
+| [docs/goal.md](docs/goal.md) | Especificación funcional original del proyecto |
+| [docs/status.md](docs/status.md) | Estado actual del proyecto (gaps, deuda técnica) |
+| [docs/memory.md](docs/memory.md) | Bitácora de decisiones técnicas y backlog histórico |
+| [docs/history/](docs/history/) | Snapshots de estado obsoletos, conservados por contexto histórico |
+| [tasks.md](tasks.md) | Backlog de tareas activo del ecosistema TOKENOVO |

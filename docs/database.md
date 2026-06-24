@@ -75,4 +75,4 @@ erDiagram
 ### Context & Navigation
 - [GEMINI.md](../GEMINI.md)
 - [architecture.md](architecture.md)
-- [business_logic.md](business_logic.md)
+- [business-logic.md](business-logic.md)

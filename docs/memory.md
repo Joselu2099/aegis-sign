@@ -48,5 +48,6 @@
 
 ### Navigation
 - [GEMINI.md](../GEMINI.md)
-- [business_logic.md](../context/business_logic.md)
-- [database.md](../context/database.md)
+- [business-logic.md](business-logic.md)
+- [database.md](database.md)
+- [status.md](status.md)
