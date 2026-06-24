@@ -40,8 +40,10 @@ public class TokenBucketRateLimiterFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
-        
+        log.info("Filtering request for path: {}", path);
+
         if (!path.startsWith("/api/v1/kyc")) {
+            log.info("Path does not start with /api/v1/kyc, skipping rate limit for path: {}", path);
             return chain.filter(exchange);
         }
 
@@ -52,9 +54,12 @@ public class TokenBucketRateLimiterFilter implements WebFilter {
         String key = "rate_limit:kyc:" + ip;
         long now = Instant.now().getEpochSecond();
 
+        log.info("Applying rate limit for IP: {}, Key: {}, Capacity: {}, Refill Rate: {}, Now: {}", ip, key, capacity, refillRate, now);
+
         return redisTemplate.execute(script, List.of(key), List.of(String.valueOf(capacity), String.valueOf(refillRate), String.valueOf(now)))
                 .next()
                 .flatMap(allowed -> {
+                    log.info("Redis script returned allowed: {} for IP: {} on path: {}", allowed, ip, path);
                     if (allowed == 1L) {
                         return chain.filter(exchange);
                     } else {

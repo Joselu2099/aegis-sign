@@ -17,6 +17,10 @@ public class AuditTrail {
     private UUID id;
     private UUID contractId;
     private UUID kycSessionId;
+    private String ocrMrzResults;
+    private Double biometricScore;
+    private String preSignatureHash;
+    private String postSignatureHash;
     private List<AuditTrailEvent> events;
 
     @Data

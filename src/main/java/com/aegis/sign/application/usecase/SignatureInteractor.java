@@ -10,6 +10,8 @@ import com.aegis.sign.domain.port.SignatureRepositoryPort;
 import com.aegis.sign.domain.port.SignatureServicePort;
 import com.aegis.sign.domain.port.EncryptionPort;
 import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.model.KycSession;
+import com.aegis.sign.domain.port.KycRepositoryPort;
 import com.aegis.sign.domain.service.PdfTemplateCompiler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class SignatureInteractor implements SignatureUseCase {
     private final EncryptionPort encryptionPort;
     private final PdfTemplateCompiler pdfTemplateCompiler;
     private final StoragePort storagePort;
+    private final KycRepositoryPort kycRepositoryPort;
 
     @Override
     public Mono<String> prepareContractHash(UUID contractId) {
@@ -41,66 +44,84 @@ public class SignatureInteractor implements SignatureUseCase {
     @Override
     public Mono<Signature> signContract(UUID contractId, UUID kycSessionId, String signerId, String certificateThumbprint, String ipAddress, String userAgent) {
         return contractRepositoryPort.findById(contractId)
-                .flatMap(contract -> encryptionPort.encrypt(certificateThumbprint)
-                        .flatMap(encryptedThumbprint -> signatureServicePort.sign(contract.getContentHash(), encryptedThumbprint)
-                                .flatMap(signatureHash -> {
-                                    Signature signature = Signature.builder()
-                                            .id(UUID.randomUUID())
-                                            .contractId(contractId)
-                                            .signerId(signerId)
-                                            .hash(signatureHash)
-                                            .certificateThumbprint(encryptedThumbprint) // Store encrypted thumbprint
-                                            .timestamp(LocalDateTime.now())
-                                            .build();
+                .flatMap(contract -> Mono.zip(
+                        encryptionPort.encrypt(certificateThumbprint),
+                        kycRepositoryPort.findById(kycSessionId)
+                )
+                        .flatMap(tuple -> {
+                            String encryptedThumbprint = tuple.getT1();
+                            KycSession kycSession = tuple.getT2();
+                            String preSignatureHash = contract.getContentHash();
 
-                            contract.setStatus(Contract.ContractStatus.SIGNED);
+                            return signatureServicePort.sign(preSignatureHash, encryptedThumbprint)
+                                    .flatMap(postSignatureHash -> {
+                                        Signature signature = Signature.builder()
+                                                .id(UUID.randomUUID())
+                                                .contractId(contractId)
+                                                .signerId(signerId)
+                                                .hash(postSignatureHash)
+                                                .certificateThumbprint(encryptedThumbprint) // Store encrypted thumbprint
+                                                .timestamp(LocalDateTime.now())
+                                                .build();
 
-                            AuditTrail.AuditTrailEvent event = AuditTrail.AuditTrailEvent.builder()
-                                    .eventType("SIGNATURE")
-                                    .timestamp(LocalDateTime.now())
-                                    .description("Contract signed by " + signerId)
-                                    .ipAddress(ipAddress)
-                                    .userAgent(userAgent)
-                                    .build();
+                                        contract.setStatus(Contract.ContractStatus.SIGNED);
 
-                            AuditTrail auditTrail = AuditTrail.builder()
-                                    .id(UUID.randomUUID())
-                                    .contractId(contractId)
-                                    .kycSessionId(kycSessionId)
-                                    .events(List.of(event))
-                                    .build();
+                                        AuditTrail.AuditTrailEvent event = AuditTrail.AuditTrailEvent.builder()
+                                                .eventType("SIGNATURE")
+                                                .timestamp(LocalDateTime.now())
+                                                .description("Contract signed by " + signerId)
+                                                .ipAddress(ipAddress)
+                                                .userAgent(userAgent)
+                                                .build();
 
-                            return signatureRepositoryPort.save(signature)
-                                    .then(contractRepositoryPort.save(contract))
-                                    .then(auditTrailRepositoryPort.save(auditTrail))
-                                    .thenReturn(signature);
-                        })) // Corrected closing for encryptedThumbprint flatMap
-                ); // Corrected closing for contract flatMap
+                                        AuditTrail auditTrail = AuditTrail.builder()
+                                                .id(UUID.randomUUID())
+                                                .contractId(contractId)
+                                                .kycSessionId(kycSessionId)
+                                                .ocrMrzResults("MRZ Valid: " + kycSession.isMrzValid() + ", Message: " + kycSession.getMrzValidationErrorMessage() + ", Metadata: " + kycSession.getDocumentMetadata()) // Constructed from available fields
+                                                .biometricScore(kycSession.getFaceMatchScore()) // Corrected method call
+                                                .preSignatureHash(preSignatureHash)
+                                                .postSignatureHash(postSignatureHash)
+                                                .events(List.of(event))
+                                                .build();
+
+                                        return signatureRepositoryPort.save(signature)
+                                                .then(contractRepositoryPort.save(contract))
+                                                .then(auditTrailRepositoryPort.save(auditTrail))
+                                                .thenReturn(signature);
+                                    });
+                        }));
     }
 
     @Override
     public Mono<byte[]> generateAndSignAuditTrailPdf(UUID contractId) {
+        String jsonTemplate;
+        try {
+            jsonTemplate = new String(getClass().getClassLoader().getResourceAsStream("audit-trail-template.json").readAllBytes());
+        } catch (Exception e) {
+            return Mono.error(new RuntimeException("Failed to load audit-trail-template.json", e));
+        }
+
         return auditTrailRepositoryPort.findByContractId(contractId)
                 .flatMap(auditTrail -> {
-                    // Assuming PdfTemplateCompiler.compile expects a map of data
-                    // and a template name. We'll need a template for the audit trail.
-                    // For now, let's convert the AuditTrail object to a map.
                     Map<String, Object> data = Map.of(
                             "contractId", auditTrail.getContractId().toString(),
                             "kycSessionId", auditTrail.getKycSessionId().toString(),
+                            "ocrMrzResults", auditTrail.getOcrMrzResults() != null ? auditTrail.getOcrMrzResults() : "N/A",
+                            "biometricScore", auditTrail.getBiometricScore() != null ? auditTrail.getBiometricScore().toString() : "N/A",
+                            "preSignatureHash", auditTrail.getPreSignatureHash() != null ? auditTrail.getPreSignatureHash() : "N/A",
+                            "postSignatureHash", auditTrail.getPostSignatureHash() != null ? auditTrail.getPostSignatureHash() : "N/A",
                             "events", auditTrail.getEvents().stream()
-                                    .map(event -> Map.of(
-                                            "eventType", event.getEventType(),
-                                            "timestamp", event.getTimestamp().toString(),
-                                            "description", event.getDescription(),
-                                            "ipAddress", event.getIpAddress(),
-                                            "userAgent", event.getUserAgent()
-                                    ))
-                                    .collect(java.util.stream.Collectors.toList())
+                                    .map(event -> String.format("Type: %s, Timestamp: %s, Description: %s, IP: %s, UserAgent: %s",
+                                            event.getEventType(),
+                                            event.getTimestamp().toString(),
+                                            event.getDescription(),
+                                            event.getIpAddress(),
+                                            event.getUserAgent()))
+                                    .collect(java.util.stream.Collectors.joining("\n"))
                     );
-                    String templateName = "audit-trail-template"; // This template needs to exist
 
-                    return Mono.fromCallable(() -> pdfTemplateCompiler.compile(templateName, data))
+                    return Mono.fromCallable(() -> pdfTemplateCompiler.compile(jsonTemplate, data))
                             .flatMap(unsignedPdf -> signatureServicePort.signPdf(unsignedPdf))
                             .flatMap(signedPdf -> storagePort.upload(signedPdf, "audit-trails/" + contractId.toString() + "-audit-trail.pdf"))
                             .thenReturn(new byte[0]); // Return empty byte array for now, or the actual PDF if needed
