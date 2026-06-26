@@ -3,7 +3,9 @@ package com.aegis.sign.infrastructure.adapter.db;
 import com.aegis.sign.domain.model.AuditTrail;
 import com.aegis.sign.infrastructure.adapter.db.entity.AuditTrailEntity;
 import com.aegis.sign.infrastructure.adapter.db.repository.AuditTrailRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.r2dbc.postgresql.codec.Json;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +20,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -131,6 +135,64 @@ class AuditTrailRepositoryAdapterTest {
 
         // Assert
         verify(repository).updateFinalSignedPdfUri(id, uri);
+    }
+
+    /**
+     * Important fix verification: if serialization of the manifest fails,
+     * save() must propagate the error rather than silently persisting an
+     * empty/corrupted trail_manifest payload. Audit trail data is legal
+     * evidence, so swallowing the failure and writing "{}" would be a
+     * data-integrity bug.
+     */
+    @Test
+    void save_shouldPropagateError_whenManifestSerializationFails() throws JsonProcessingException {
+        // Arrange
+        ObjectMapper failingMapper = org.mockito.Mockito.mock(ObjectMapper.class);
+        when(failingMapper.writeValueAsString(any()))
+                .thenThrow(new com.fasterxml.jackson.databind.JsonMappingException(null, "boom"));
+        AuditTrailRepositoryAdapter failingAdapter = new AuditTrailRepositoryAdapter(repository, failingMapper);
+
+        AuditTrail auditTrail = AuditTrail.builder()
+                .id(UUID.randomUUID())
+                .contractId(UUID.randomUUID())
+                .kycSessionId(UUID.randomUUID())
+                .events(List.of())
+                .build();
+
+        // Act & Assert
+        StepVerifier.create(failingAdapter.save(auditTrail))
+                .expectErrorMatches(ex -> ex instanceof AuditTrailRepositoryAdapter.AuditTrailPersistenceException
+                        && ex.getCause() instanceof JsonProcessingException)
+                .verify();
+
+        // The repository must never be called with a corrupted/empty manifest.
+        verify(repository, never()).save(any());
+    }
+
+    /**
+     * Important fix verification: if the persisted trail_manifest JSON is
+     * malformed/unreadable, toDomain() must propagate the error rather than
+     * silently returning an AuditTrail with empty events and null fields
+     * that looks like a valid-but-empty record.
+     */
+    @Test
+    void findById_shouldPropagateError_whenManifestDeserializationFails() {
+        // Arrange
+        UUID id = UUID.randomUUID();
+        AuditTrailEntity corruptedEntity = AuditTrailEntity.builder()
+                .id(id)
+                .contractId(UUID.randomUUID())
+                .kycSessionId(UUID.randomUUID())
+                .trailManifest(Json.of("{not-valid-json"))
+                .build();
+
+        when(repository.findById(id)).thenReturn(Mono.just(corruptedEntity));
+
+        // Act & Assert
+        StepVerifier.create(adapter.findById(id))
+                .expectErrorMatches(ex -> ex instanceof AuditTrailRepositoryAdapter.AuditTrailPersistenceException
+                        && ex.getCause() instanceof JsonProcessingException)
+                .verify();
     }
 
     @Test

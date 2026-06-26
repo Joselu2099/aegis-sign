@@ -1,6 +1,7 @@
 package com.aegis.sign.application.usecase;
 
 import com.aegis.sign.application.ports.in.SignatureUseCase;
+import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.domain.model.AuditTrail;
 import com.aegis.sign.domain.model.Contract;
 import com.aegis.sign.domain.model.Signature;
@@ -46,7 +47,7 @@ public class SignatureInteractor implements SignatureUseCase {
     @Override
     public Mono<Signature> getSignature(UUID signatureId) {
         return signatureRepositoryPort.findById(signatureId)
-                .switchIfEmpty(Mono.error(new com.aegis.sign.domain.exception.ResourceNotFoundException("Signature not found: " + signatureId)));
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Signature not found: " + signatureId)));
     }
 
     @Override
@@ -116,7 +117,7 @@ public class SignatureInteractor implements SignatureUseCase {
         }
 
         return auditTrailRepositoryPort.findByContractId(contractId)
-                .switchIfEmpty(Mono.error(new com.aegis.sign.domain.exception.ResourceNotFoundException("Audit trail not found for contract: " + contractId)))
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Audit trail not found for contract: " + contractId)))
                 .flatMap(auditTrail -> {
                     Map<String, Object> data = Map.of(
                             "contractId", auditTrail.getContractId().toString(),
