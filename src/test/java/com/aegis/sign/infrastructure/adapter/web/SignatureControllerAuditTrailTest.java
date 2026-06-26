@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
         },
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
-                classes = {com.aegis.sign.infrastructure.web.filter.TokenBucketRateLimiterFilter.class}
+                classes = {com.aegis.sign.infrastructure.adapter.web.filter.TokenBucketRateLimiterFilter.class}
         )
 )
 class SignatureControllerAuditTrailTest {

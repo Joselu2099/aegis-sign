@@ -1,4 +1,4 @@
-package com.aegis.sign.infrastructure.web.filter;
+package com.aegis.sign.infrastructure.adapter.web.filter;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

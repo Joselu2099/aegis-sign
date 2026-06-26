@@ -1,4 +1,4 @@
-package com.aegis.sign.infrastructure.web.filter;
+package com.aegis.sign.infrastructure.adapter.web.filter;
 
 import com.aegis.sign.AbstractIntegrationTest;
 import com.aegis.sign.application.ports.in.KycUseCase;

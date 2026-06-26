@@ -2,6 +2,9 @@ package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.application.ports.in.ContractUseCase;
 import com.aegis.sign.domain.model.Contract;
+import com.aegis.sign.infrastructure.adapter.db.ContractRepositoryAdapter;
+import com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -14,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.springframework.context.annotation.ComponentScan;
@@ -31,7 +34,7 @@ import org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDeta
         },
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
-                classes = {com.aegis.sign.infrastructure.web.filter.TokenBucketRateLimiterFilter.class}
+                classes = {com.aegis.sign.infrastructure.adapter.web.filter.TokenBucketRateLimiterFilter.class}
         )
 )
 class ContractControllerTest {
@@ -118,6 +121,37 @@ class ContractControllerTest {
                 .exchange()
                 .expectStatus().isOk() // Spring returns 200 with empty body for Mono.empty() unless a global exception handler overrides it, but the response body is empty which causes Jayway to fail parsing it.
                 .expectBody().isEmpty();
+    }
+
+    /**
+     * Regression test: ContractRepositoryAdapter must surface a domain
+     * ResourceNotFoundException so GlobalExceptionHandler maps it to 404
+     * instead of falling through to the generic 500 handler.
+     */
+    @Test
+    void getContract_ShouldReturnNotFoundThroughRealRepositoryAdapter_whenContractMissing() {
+        // Arrange
+        UUID contractId = UUID.randomUUID();
+
+        ContractRepository contractRepository = mock(ContractRepository.class);
+        when(contractRepository.findById(contractId)).thenReturn(Mono.empty());
+
+        ContractRepositoryAdapter repositoryAdapter =
+                new ContractRepositoryAdapter(contractRepository, new ObjectMapper());
+
+        // Real getContract() path: delegates directly to the repository port,
+        // which is exactly the path that previously threw the wrong exception class.
+        Mono<Contract> notFoundMono = repositoryAdapter.findById(contractId);
+        when(contractUseCase.getContract(eq(contractId))).thenReturn(notFoundMono);
+
+        // Act & Assert
+        webTestClient.get()
+                .uri("/api/v1/contracts/{id}", contractId)
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.errorCode").isEqualTo("NOT_FOUND");
     }
 
     @Test
