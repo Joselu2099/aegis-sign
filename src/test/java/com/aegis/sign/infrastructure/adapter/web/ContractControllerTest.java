@@ -2,6 +2,9 @@ package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.application.ports.in.ContractUseCase;
 import com.aegis.sign.domain.model.Contract;
+import com.aegis.sign.infrastructure.adapter.db.ContractRepositoryAdapter;
+import com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -14,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.springframework.context.annotation.ComponentScan;
@@ -121,32 +124,20 @@ class ContractControllerTest {
     }
 
     /**
-     * Regression test for the duplicate ResourceNotFoundException bug.
-     *
-     * Before the fix, ContractRepositoryAdapter threw
-     * com.aegis.sign.infrastructure.adapter.web.ResourceNotFoundException
-     * (a stray duplicate class), which GlobalExceptionHandler did NOT
-     * recognize because it only maps com.aegis.sign.domain.exception.ResourceNotFoundException
-     * to 404. That mismatch caused the generic Exception handler to catch it
-     * instead and return 500 Internal Server Error.
-     *
-     * This test exercises the real call chain (ContractController ->
-     * ContractInteractor -> ContractRepositoryAdapter), mocking only the
-     * R2DBC ContractRepository at the lowest level, so it would have failed
-     * before the fix (asserting 500) and now asserts the corrected 404.
+     * Regression test: ContractRepositoryAdapter must surface a domain
+     * ResourceNotFoundException so GlobalExceptionHandler maps it to 404
+     * instead of falling through to the generic 500 handler.
      */
     @Test
     void getContract_ShouldReturnNotFoundThroughRealRepositoryAdapter_whenContractMissing() {
         // Arrange
         UUID contractId = UUID.randomUUID();
 
-        com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository contractRepository =
-                org.mockito.Mockito.mock(com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository.class);
+        ContractRepository contractRepository = mock(ContractRepository.class);
         when(contractRepository.findById(contractId)).thenReturn(Mono.empty());
 
-        com.aegis.sign.infrastructure.adapter.db.ContractRepositoryAdapter repositoryAdapter =
-                new com.aegis.sign.infrastructure.adapter.db.ContractRepositoryAdapter(
-                        contractRepository, new com.fasterxml.jackson.databind.ObjectMapper());
+        ContractRepositoryAdapter repositoryAdapter =
+                new ContractRepositoryAdapter(contractRepository, new ObjectMapper());
 
         // Real getContract() path: delegates directly to the repository port,
         // which is exactly the path that previously threw the wrong exception class.
