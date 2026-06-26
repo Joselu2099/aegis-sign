@@ -2,7 +2,7 @@ package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.application.ports.in.SignatureUseCase;
 import com.aegis.sign.domain.model.Signature;
-import com.aegis.sign.infrastructure.web.filter.TokenBucketRateLimiterFilter;
+import com.aegis.sign.infrastructure.adapter.web.filter.TokenBucketRateLimiterFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
