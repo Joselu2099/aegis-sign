@@ -1,5 +1,6 @@
 package com.aegis.sign.infrastructure.adapter.db;
 
+import com.aegis.sign.domain.exception.PersistenceSerializationException;
 import com.aegis.sign.domain.model.AuditTrail;
 import com.aegis.sign.infrastructure.adapter.db.entity.AuditTrailEntity;
 import com.aegis.sign.infrastructure.adapter.db.repository.AuditTrailRepository;
@@ -161,7 +162,7 @@ class AuditTrailRepositoryAdapterTest {
 
         // Act & Assert
         StepVerifier.create(failingAdapter.save(auditTrail))
-                .expectErrorMatches(ex -> ex instanceof AuditTrailRepositoryAdapter.AuditTrailPersistenceException
+                .expectErrorMatches(ex -> ex instanceof PersistenceSerializationException
                         && ex.getCause() instanceof JsonProcessingException)
                 .verify();
 
@@ -190,7 +191,7 @@ class AuditTrailRepositoryAdapterTest {
 
         // Act & Assert
         StepVerifier.create(adapter.findById(id))
-                .expectErrorMatches(ex -> ex instanceof AuditTrailRepositoryAdapter.AuditTrailPersistenceException
+                .expectErrorMatches(ex -> ex instanceof PersistenceSerializationException
                         && ex.getCause() instanceof JsonProcessingException)
                 .verify();
     }

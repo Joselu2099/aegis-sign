@@ -1,5 +1,6 @@
 package com.aegis.sign.infrastructure.adapter.db;
 
+import com.aegis.sign.domain.exception.PersistenceSerializationException;
 import com.aegis.sign.domain.model.KycSession;
 import com.aegis.sign.domain.port.KycRepositoryPort;
 import com.aegis.sign.infrastructure.adapter.db.entity.KycSessionEntity;
@@ -8,7 +9,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class KycRepositoryAdapter implements KycRepositoryPort {
@@ -27,50 +26,61 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
 
     @Override
     public Mono<KycSession> save(KycSession session) {
-        return repository.save(toEntity(session))
-                .map(this::toDomain);
+        return toEntity(session)
+                .flatMap(repository::save)
+                .flatMap(this::toDomain);
     }
 
     @Override
     public Mono<KycSession> findById(UUID id) {
         return repository.findById(id)
-                .map(this::toDomain);
+                .flatMap(this::toDomain);
     }
 
-    private KycSessionEntity toEntity(KycSession session) {
-        String extractedData = null;
-        try {
+    private Mono<KycSessionEntity> toEntity(KycSession session) {
+        return Mono.fromCallable(() -> {
             Map<String, Object> data = new HashMap<>(session.getDocumentMetadata());
             data.put("signerId", session.getSignerId());
             data.put("mrzValid", session.isMrzValid());
             data.put("mrzValidationErrorMessage", session.getMrzValidationErrorMessage());
             data.put("biometricValid", session.isBiometricValid());
             data.put("biometricValidationErrorMessage", session.getBiometricValidationErrorMessage());
-            extractedData = objectMapper.writeValueAsString(data);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize KYC session data", e);
-        }
 
-        return KycSessionEntity.builder()
-                .id(session.getId())
-                .status(mapStatusToDb(session.getStatus()))
-                .extractedData(extractedData != null ? io.r2dbc.postgresql.codec.Json.of(extractedData) : null)
-                .biometricScore(session.getFaceMatchScore())
-                .expiresAt(OffsetDateTime.now().plusHours(1))
-                .build();
+            String extractedData;
+            try {
+                extractedData = objectMapper.writeValueAsString(data);
+            } catch (JsonProcessingException e) {
+                throw new PersistenceSerializationException("Failed to serialize KYC session data for session "
+                        + session.getId(), e);
+            }
+
+            return KycSessionEntity.builder()
+                    .id(session.getId())
+                    .status(mapStatusToDb(session.getStatus()))
+                    .extractedData(io.r2dbc.postgresql.codec.Json.of(extractedData))
+                    .biometricScore(session.getFaceMatchScore())
+                    .expiresAt(OffsetDateTime.now().plusHours(1))
+                    .build();
+        });
     }
 
-    private KycSession toDomain(KycSessionEntity entity) {
-        Map<String, String> metadata = new HashMap<>();
-        String signerId = null;
-        boolean mrzValid = false;
-        String mrzValidationErrorMessage = null;
-        boolean biometricValid = false;
-        String biometricValidationErrorMessage = null;
+    private Mono<KycSession> toDomain(KycSessionEntity entity) {
+        return Mono.fromCallable(() -> {
+            Map<String, String> metadata = new HashMap<>();
+            String signerId = null;
+            boolean mrzValid = false;
+            String mrzValidationErrorMessage = null;
+            boolean biometricValid = false;
+            String biometricValidationErrorMessage = null;
 
-        if (entity.getExtractedData() != null) {
-            try {
-                Map<String, Object> data = objectMapper.readValue(entity.getExtractedData().asString(), new TypeReference<>() {});
+            if (entity.getExtractedData() != null) {
+                Map<String, Object> data;
+                try {
+                    data = objectMapper.readValue(entity.getExtractedData().asString(), new TypeReference<>() {});
+                } catch (JsonProcessingException e) {
+                    throw new PersistenceSerializationException("Failed to deserialize KYC session data for session "
+                            + entity.getId(), e);
+                }
                 for (Map.Entry<String, Object> entry : data.entrySet()) {
                     String key = entry.getKey();
                     Object value = entry.getValue();
@@ -88,22 +98,20 @@ public class KycRepositoryAdapter implements KycRepositoryPort {
                         metadata.put(key, String.valueOf(value));
                     }
                 }
-            } catch (JsonProcessingException e) {
-                log.error("Failed to deserialize KYC session data", e);
             }
-        }
 
-        return KycSession.builder()
-                .id(entity.getId())
-                .status(mapStatusToDomain(entity.getStatus(), mrzValid, biometricValid))
-                .documentMetadata(metadata)
-                .faceMatchScore(entity.getBiometricScore())
-                .signerId(signerId)
-                .mrzValid(mrzValid)
-                .mrzValidationErrorMessage(mrzValidationErrorMessage)
-                .biometricValid(biometricValid)
-                .biometricValidationErrorMessage(biometricValidationErrorMessage)
-                .build();
+            return KycSession.builder()
+                    .id(entity.getId())
+                    .status(mapStatusToDomain(entity.getStatus(), mrzValid, biometricValid))
+                    .documentMetadata(metadata)
+                    .faceMatchScore(entity.getBiometricScore())
+                    .signerId(signerId)
+                    .mrzValid(mrzValid)
+                    .mrzValidationErrorMessage(mrzValidationErrorMessage)
+                    .biometricValid(biometricValid)
+                    .biometricValidationErrorMessage(biometricValidationErrorMessage)
+                    .build();
+        });
     }
 
     private String mapStatusToDb(KycSession.KycStatus status) {

@@ -1,5 +1,6 @@
 package com.aegis.sign.infrastructure.adapter.db;
 
+import com.aegis.sign.domain.exception.PersistenceSerializationException;
 import com.aegis.sign.domain.model.AuditTrail;
 import com.aegis.sign.domain.port.AuditTrailRepositoryPort;
 import com.aegis.sign.infrastructure.adapter.db.entity.AuditTrailEntity;
@@ -62,7 +63,7 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
             try {
                 manifest = objectMapper.writeValueAsString(trailManifest);
             } catch (JsonProcessingException e) {
-                throw new AuditTrailPersistenceException("Failed to serialize audit trail manifest for contract "
+                throw new PersistenceSerializationException("Failed to serialize audit trail manifest for contract "
                         + auditTrail.getContractId(), e);
             }
 
@@ -83,7 +84,7 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
                 try {
                     trailManifest = objectMapper.readValue(entity.getTrailManifest().asString(), TrailManifest.class);
                 } catch (JsonProcessingException e) {
-                    throw new AuditTrailPersistenceException("Failed to deserialize audit trail manifest for audit trail "
+                    throw new PersistenceSerializationException("Failed to deserialize audit trail manifest for audit trail "
                             + entity.getId(), e);
                 }
             }
@@ -108,18 +109,6 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
 
             return builder.build();
         });
-    }
-
-    /**
-     * Thrown when the {@code trail_manifest} JSON payload cannot be
-     * serialized or deserialized. Audit trail data is legal evidence, so a
-     * (de)serialization failure must fail the reactive chain rather than
-     * silently persisting or returning a corrupted/incomplete record.
-     */
-    static class AuditTrailPersistenceException extends RuntimeException {
-        AuditTrailPersistenceException(String message, Throwable cause) {
-            super(message, cause);
-        }
     }
 
     /**
