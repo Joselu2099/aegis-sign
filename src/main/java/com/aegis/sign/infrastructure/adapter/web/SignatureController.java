@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import reactor.core.publisher.Mono;
@@ -60,6 +62,14 @@ public class SignatureController {
                 ipAddress,
                 userAgent
         ).map(ApiResponse::success);
+    }
+
+    @GetMapping("/audit-trail/{contractId}")
+    public Mono<ResponseEntity<byte[]>> getAuditTrailPdf(@PathVariable UUID contractId) {
+        return signatureUseCase.generateAndSignAuditTrailPdf(contractId)
+                .map(pdfBytes -> ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_PDF)
+                        .body(pdfBytes));
     }
 
     @Data

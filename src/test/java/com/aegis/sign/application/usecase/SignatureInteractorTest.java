@@ -131,8 +131,9 @@ class SignatureInteractorTest {
     void generateAndSignAuditTrailPdf_shouldGenerateAndSignPdf() {
         // Arrange
         UUID contractId = UUID.randomUUID();
+        UUID auditTrailId = UUID.randomUUID();
         AuditTrail auditTrail = AuditTrail.builder()
-                .id(UUID.randomUUID())
+                .id(auditTrailId)
                 .contractId(contractId)
                 .kycSessionId(UUID.randomUUID())
                 .events(List.of(
@@ -147,23 +148,49 @@ class SignatureInteractorTest {
                 .build();
         byte[] unsignedPdf = "unsigned_pdf_content".getBytes();
         byte[] signedPdf = "signed_pdf_content".getBytes();
+        String storedPath = "path/to/signed_pdf.pdf";
 
         when(auditTrailRepositoryPort.findByContractId(contractId)).thenReturn(Mono.just(auditTrail));
         when(pdfTemplateCompiler.compile(anyString(), anyMap())).thenReturn(unsignedPdf);
         when(signatureServicePort.signPdf(unsignedPdf)).thenReturn(Mono.just(signedPdf));
-        when(storagePort.upload(eq(signedPdf), anyString())).thenReturn(Mono.just("path/to/signed_pdf.pdf"));
+        when(storagePort.upload(eq(signedPdf), anyString())).thenReturn(Mono.just(storedPath));
+        when(auditTrailRepositoryPort.updateFinalSignedPdfUri(eq(auditTrailId), eq(storedPath))).thenReturn(Mono.empty());
 
         // Act
         Mono<byte[]> result = signatureInteractor.generateAndSignAuditTrailPdf(contractId);
 
-        // Assert
+        // Assert: the Mono emits the actual signed PDF bytes, not an empty array.
         StepVerifier.create(result)
-                .expectNextMatches(bytes -> bytes.length == 0) // Expecting empty byte array as per current implementation
+                .expectNextMatches(bytes -> java.util.Arrays.equals(bytes, signedPdf))
                 .verifyComplete();
 
         verify(auditTrailRepositoryPort).findByContractId(contractId);
         verify(pdfTemplateCompiler).compile(anyString(), anyMap());
         verify(signatureServicePort).signPdf(unsignedPdf);
         verify(storagePort).upload(eq(signedPdf), contains(contractId.toString()));
+        verify(auditTrailRepositoryPort).updateFinalSignedPdfUri(auditTrailId, storedPath);
+    }
+
+    @Test
+    void generateAndSignAuditTrailPdf_shouldErrorWhenAuditTrailNotFound() {
+        // Arrange
+        UUID contractId = UUID.randomUUID();
+        when(auditTrailRepositoryPort.findByContractId(contractId)).thenReturn(Mono.empty());
+
+        // Act
+        Mono<byte[]> result = signatureInteractor.generateAndSignAuditTrailPdf(contractId);
+
+        // Assert: no audit trail found should produce a clear domain error
+        // (ResourceNotFoundException), not a silent empty completion or an NPE.
+        StepVerifier.create(result)
+                .expectErrorMatches(ex -> ex instanceof com.aegis.sign.domain.exception.ResourceNotFoundException
+                        && ex.getMessage().contains(contractId.toString()))
+                .verify();
+
+        verify(auditTrailRepositoryPort).findByContractId(contractId);
+        verify(pdfTemplateCompiler, never()).compile(anyString(), anyMap());
+        verify(signatureServicePort, never()).signPdf(any());
+        verify(storagePort, never()).upload(any(), anyString());
+        verify(auditTrailRepositoryPort, never()).updateFinalSignedPdfUri(any(), anyString());
     }
 }
