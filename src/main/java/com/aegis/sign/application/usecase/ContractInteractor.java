@@ -1,6 +1,7 @@
 package com.aegis.sign.application.usecase;
 
 import com.aegis.sign.application.ports.in.ContractUseCase;
+import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.domain.model.Contract;
 import com.aegis.sign.domain.port.ContractRepositoryPort;
 import com.aegis.sign.domain.port.StoragePort;
@@ -63,6 +64,7 @@ public class ContractInteractor implements ContractUseCase {
 
     @Override
     public Mono<Contract> getContract(UUID id) {
-        return contractRepositoryPort.findById(id);
+        return contractRepositoryPort.findById(id)
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Contract not found: " + id)));
     }
 }

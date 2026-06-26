@@ -2,7 +2,6 @@ package com.aegis.sign.infrastructure.adapter.db;
 
 import com.aegis.sign.domain.model.Contract;
 import com.aegis.sign.domain.port.ContractRepositoryPort;
-import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.infrastructure.adapter.db.entity.ContractEntity;
 import com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository;
 import io.r2dbc.postgresql.codec.Json;
@@ -37,8 +36,7 @@ public class ContractRepositoryAdapter implements ContractRepositoryPort {
     @Override
     public Mono<Contract> findById(UUID id) {
         return repository.findById(id)
-                .map(this::toDomain)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Contract not found: " + id)));
+                .map(this::toDomain);
     }
 
     private ContractEntity toEntity(Contract contract) {
