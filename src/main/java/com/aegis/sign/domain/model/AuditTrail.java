@@ -22,6 +22,7 @@ public class AuditTrail {
     private String preSignatureHash;
     private String postSignatureHash;
     private List<AuditTrailEvent> events;
+    private String finalSignedPdfUri;
 
     @Data
     @Builder

@@ -5,8 +5,11 @@ import com.aegis.sign.domain.port.AuditTrailRepositoryPort;
 import com.aegis.sign.infrastructure.adapter.db.entity.AuditTrailEntity;
 import com.aegis.sign.infrastructure.adapter.db.repository.AuditTrailRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -42,13 +45,24 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
                 .map(this::toDomain);
     }
 
+    @Override
+    public Mono<Void> updateFinalSignedPdfUri(UUID auditTrailId, String uri) {
+        return repository.updateFinalSignedPdfUri(auditTrailId, uri);
+    }
+
     private AuditTrailEntity toEntity(AuditTrail auditTrail) {
-        String manifest = "[]";
+        String manifest = "{}";
         try {
-            manifest = objectMapper.writeValueAsString(auditTrail.getEvents());
+            TrailManifest trailManifest = TrailManifest.builder()
+                    .events(auditTrail.getEvents())
+                    .ocrMrzResults(auditTrail.getOcrMrzResults())
+                    .biometricScore(auditTrail.getBiometricScore())
+                    .preSignatureHash(auditTrail.getPreSignatureHash())
+                    .postSignatureHash(auditTrail.getPostSignatureHash())
+                    .build();
+            manifest = objectMapper.writeValueAsString(trailManifest);
         } catch (JsonProcessingException e) {
-            // handle
-            log.error("Error serializing audit trail events", e);
+            log.error("Error serializing audit trail manifest", e);
         }
 
         return AuditTrailEntity.builder()
@@ -56,24 +70,55 @@ public class AuditTrailRepositoryAdapter implements AuditTrailRepositoryPort {
                 .contractId(auditTrail.getContractId())
                 .kycSessionId(auditTrail.getKycSessionId())
                 .trailManifest(io.r2dbc.postgresql.codec.Json.of(manifest))
+                .finalSignedPdfUri(auditTrail.getFinalSignedPdfUri())
                 .build();
     }
 
     private AuditTrail toDomain(AuditTrailEntity entity) {
-        List<AuditTrail.AuditTrailEvent> events = Collections.emptyList();
+        TrailManifest trailManifest = null;
         try {
             if (entity.getTrailManifest() != null) {
-                events = objectMapper.readValue(entity.getTrailManifest().asString(), new TypeReference<List<AuditTrail.AuditTrailEvent>>() {});
+                trailManifest = objectMapper.readValue(entity.getTrailManifest().asString(), TrailManifest.class);
             }
         } catch (JsonProcessingException e) {
-            // handle
-            log.error("Error deserializing audit trail events", e);
+            log.error("Error deserializing audit trail manifest", e);
         }
-        return AuditTrail.builder()
+
+        List<AuditTrail.AuditTrailEvent> events = trailManifest != null && trailManifest.getEvents() != null
+                ? trailManifest.getEvents()
+                : Collections.emptyList();
+
+        AuditTrail.AuditTrailBuilder builder = AuditTrail.builder()
                 .id(entity.getId())
                 .contractId(entity.getContractId())
                 .kycSessionId(entity.getKycSessionId())
                 .events(events)
-                .build();
+                .finalSignedPdfUri(entity.getFinalSignedPdfUri());
+
+        if (trailManifest != null) {
+            builder.ocrMrzResults(trailManifest.getOcrMrzResults())
+                    .biometricScore(trailManifest.getBiometricScore())
+                    .preSignatureHash(trailManifest.getPreSignatureHash())
+                    .postSignatureHash(trailManifest.getPostSignatureHash());
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * JSON shape persisted into the {@code trail_manifest} JSONB column.
+     * Holds the complete log of cryptographic events and verification scores,
+     * as documented in docs/database.md.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    private static class TrailManifest {
+        private List<AuditTrail.AuditTrailEvent> events;
+        private String ocrMrzResults;
+        private Double biometricScore;
+        private String preSignatureHash;
+        private String postSignatureHash;
     }
 }
