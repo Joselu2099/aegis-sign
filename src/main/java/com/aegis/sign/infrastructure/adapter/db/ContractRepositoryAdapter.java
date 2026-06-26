@@ -44,7 +44,7 @@ public class ContractRepositoryAdapter implements ContractRepositoryPort {
                 .status(contract.getStatus().name())
                 .documentHashSha256(contract.getContentHash())
                 .minioUri(contract.getUri())
-                .signerIds(Json.of(serializeSignerIds(contract.getSignerIds())))
+                .signerIds(Json.of(serializeSignerIds(contract.getSignerIds(), contract.getId())))
                 .build());
     }
 
@@ -55,29 +55,29 @@ public class ContractRepositoryAdapter implements ContractRepositoryPort {
                 .status(Contract.ContractStatus.valueOf(entity.getStatus()))
                 .contentHash(entity.getDocumentHashSha256())
                 .uri(entity.getMinioUri())
-                .signerIds(deserializeSignerIds(entity.getSignerIds() != null ? entity.getSignerIds().asString() : null))
+                .signerIds(deserializeSignerIds(entity.getSignerIds() != null ? entity.getSignerIds().asString() : null, entity.getId()))
                 .build());
     }
 
-    private String serializeSignerIds(List<String> signerIds) {
+    private String serializeSignerIds(List<String> signerIds, UUID contractId) {
         if (signerIds == null || signerIds.isEmpty()) {
             return "[]";
         }
         try {
             return objectMapper.writeValueAsString(signerIds);
         } catch (JsonProcessingException e) {
-            throw new PersistenceSerializationException("Failed to serialize signerIds", e);
+            throw new PersistenceSerializationException("Failed to serialize signerIds for contract " + contractId, e);
         }
     }
 
-    private List<String> deserializeSignerIds(String json) {
+    private List<String> deserializeSignerIds(String json, UUID contractId) {
         if (json == null || json.isBlank()) {
             return Collections.emptyList();
         }
         try {
             return objectMapper.readValue(json, new TypeReference<List<String>>() {});
         } catch (JsonProcessingException e) {
-            throw new PersistenceSerializationException("Failed to deserialize signerIds: " + json, e);
+            throw new PersistenceSerializationException("Failed to deserialize signerIds for contract " + contractId, e);
         }
     }
 }
