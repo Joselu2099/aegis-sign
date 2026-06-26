@@ -193,4 +193,49 @@ class SignatureInteractorTest {
         verify(storagePort, never()).upload(any(), anyString());
         verify(auditTrailRepositoryPort, never()).updateFinalSignedPdfUri(any(), anyString());
     }
+
+    @Test
+    void prepareContractHash_ShouldReturnContentHash_whenContractExists() {
+        // Arrange
+        UUID contractId = UUID.randomUUID();
+        String contentHash = "hash123";
+        Contract contract = Contract.builder()
+                .id(contractId)
+                .contentHash(contentHash)
+                .status(Contract.ContractStatus.PREPARED)
+                .build();
+
+        when(contractRepositoryPort.findById(contractId)).thenReturn(Mono.just(contract));
+
+        // Act
+        Mono<String> result = signatureInteractor.prepareContractHash(contractId);
+
+        // Assert
+        StepVerifier.create(result)
+                .expectNext(contentHash)
+                .verifyComplete();
+
+        verify(contractRepositoryPort).findById(contractId);
+    }
+
+    @Test
+    void prepareContractHash_ShouldThrowResourceNotFoundException_whenContractMissing() {
+        // Arrange
+        UUID contractId = UUID.randomUUID();
+        when(contractRepositoryPort.findById(contractId)).thenReturn(Mono.empty());
+
+        // Act
+        Mono<String> result = signatureInteractor.prepareContractHash(contractId);
+
+        // Assert: a missing contract must surface as a domain
+        // ResourceNotFoundException, not silently propagate as an empty
+        // Mono (which would otherwise turn into a 200 with no body at the
+        // POST /api/v1/signatures/prepare endpoint).
+        StepVerifier.create(result)
+                .expectErrorMatches(ex -> ex instanceof com.aegis.sign.domain.exception.ResourceNotFoundException
+                        && ex.getMessage().contains(contractId.toString()))
+                .verify();
+
+        verify(contractRepositoryPort).findById(contractId);
+    }
 }

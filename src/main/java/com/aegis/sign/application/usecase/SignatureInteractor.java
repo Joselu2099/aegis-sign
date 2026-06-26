@@ -41,6 +41,7 @@ public class SignatureInteractor implements SignatureUseCase {
     @Override
     public Mono<String> prepareContractHash(UUID contractId) {
         return contractRepositoryPort.findById(contractId)
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Contract not found: " + contractId)))
                 .map(Contract::getContentHash);
     }
 

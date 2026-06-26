@@ -1,5 +1,6 @@
 package com.aegis.sign.application.usecase;
 
+import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.domain.model.Contract;
 import com.aegis.sign.domain.port.ContractRepositoryPort;
 import com.aegis.sign.domain.port.StoragePort;
@@ -149,6 +150,26 @@ class ContractInteractorTest {
         StepVerifier.create(result)
                 .expectNext(contract)
                 .verifyComplete();
+
+        verify(contractRepositoryPort).findById(contractId);
+    }
+
+    @Test
+    void getContract_ShouldThrowResourceNotFoundException_whenContractMissing() {
+        // Arrange
+        UUID contractId = UUID.randomUUID();
+
+        when(contractRepositoryPort.findById(contractId)).thenReturn(Mono.empty());
+
+        // Act
+        Mono<Contract> result = contractInteractor.getContract(contractId);
+
+        // Assert: the interactor (not the adapter) is responsible for turning
+        // an empty repository result into a domain ResourceNotFoundException.
+        StepVerifier.create(result)
+                .expectErrorMatches(ex -> ex instanceof ResourceNotFoundException
+                        && ex.getMessage().contains(contractId.toString()))
+                .verify();
 
         verify(contractRepositoryPort).findById(contractId);
     }

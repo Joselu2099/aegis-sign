@@ -1,10 +1,12 @@
 package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.application.ports.in.ContractUseCase;
+import com.aegis.sign.application.usecase.ContractInteractor;
 import com.aegis.sign.domain.model.Contract;
-import com.aegis.sign.infrastructure.adapter.db.ContractRepositoryAdapter;
-import com.aegis.sign.infrastructure.adapter.db.repository.ContractRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.aegis.sign.domain.port.ContractRepositoryPort;
+import com.aegis.sign.domain.port.StoragePort;
+import com.aegis.sign.domain.service.PdfTemplateCompiler;
+import com.aegis.sign.domain.service.TemplateResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -124,24 +126,31 @@ class ContractControllerTest {
     }
 
     /**
-     * Regression test: ContractRepositoryAdapter must surface a domain
-     * ResourceNotFoundException so GlobalExceptionHandler maps it to 404
-     * instead of falling through to the generic 500 handler.
+     * Regression test: the real ContractInteractor must surface a domain
+     * ResourceNotFoundException when the repository returns empty, so
+     * GlobalExceptionHandler maps it to 404 instead of falling through to
+     * the generic 500 handler. Repository adapters are pure translation
+     * layers (no business-rule decisions), so the not-found decision is
+     * exercised here at the use-case level rather than the adapter level.
      */
     @Test
-    void getContract_ShouldReturnNotFoundThroughRealRepositoryAdapter_whenContractMissing() {
+    void getContract_ShouldReturnNotFoundThroughRealInteractor_whenContractMissing() {
         // Arrange
         UUID contractId = UUID.randomUUID();
 
-        ContractRepository contractRepository = mock(ContractRepository.class);
-        when(contractRepository.findById(contractId)).thenReturn(Mono.empty());
+        ContractRepositoryPort contractRepositoryPort = mock(ContractRepositoryPort.class);
+        when(contractRepositoryPort.findById(contractId)).thenReturn(Mono.empty());
 
-        ContractRepositoryAdapter repositoryAdapter =
-                new ContractRepositoryAdapter(contractRepository, new ObjectMapper());
+        ContractInteractor realInteractor = new ContractInteractor(
+                mock(TemplateResolver.class),
+                mock(PdfTemplateCompiler.class),
+                mock(StoragePort.class),
+                contractRepositoryPort
+        );
 
-        // Real getContract() path: delegates directly to the repository port,
-        // which is exactly the path that previously threw the wrong exception class.
-        Mono<Contract> notFoundMono = repositoryAdapter.findById(contractId);
+        // Real getContract() path: the interactor's switchIfEmpty is what
+        // throws ResourceNotFoundException when the repository port returns empty.
+        Mono<Contract> notFoundMono = realInteractor.getContract(contractId);
         when(contractUseCase.getContract(eq(contractId))).thenReturn(notFoundMono);
 
         // Act & Assert
