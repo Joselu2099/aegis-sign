@@ -55,9 +55,7 @@ logs/
 .codemie/
 .synthforge/
 .vscode/
-<<<<<<< HEAD
-=======
-
-target/
->>>>>>> sprint-2-tasks-01-09-domain-api
 notes/correctivos/
+
+# Local git worktrees (isolated workspaces for subagent-driven development)
+.worktrees/
