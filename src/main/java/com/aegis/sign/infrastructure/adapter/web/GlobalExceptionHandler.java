@@ -2,6 +2,7 @@ package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.domain.exception.KycTechnicalException;
 import com.aegis.sign.domain.exception.KycUserException;
+import com.aegis.sign.domain.exception.PersistenceSerializationException;
 import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.domain.exception.TemplateNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -54,5 +55,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public Mono<ResponseEntity<ApiResponse<Void>>> handleKycUserException(KycUserException ex) {
         return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode())));
+    }
+
+    @ExceptionHandler(PersistenceSerializationException.class)
+    public Mono<ResponseEntity<ApiResponse<Void>>> handlePersistenceSerializationException(PersistenceSerializationException ex) {
+        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(ex.getMessage(), "PERSISTENCE_SERIALIZATION_ERROR")));
     }
 }

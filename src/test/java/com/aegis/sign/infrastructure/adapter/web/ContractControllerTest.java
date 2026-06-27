@@ -2,6 +2,7 @@ package com.aegis.sign.infrastructure.adapter.web;
 
 import com.aegis.sign.application.ports.in.ContractUseCase;
 import com.aegis.sign.application.usecase.ContractInteractor;
+import com.aegis.sign.domain.exception.PersistenceSerializationException;
 import com.aegis.sign.domain.model.Contract;
 import com.aegis.sign.domain.port.ContractRepositoryPort;
 import com.aegis.sign.domain.port.StoragePort;
@@ -186,5 +187,34 @@ class ContractControllerTest {
                 .bodyValue(request)
                 .exchange()
                 .expectStatus().is5xxServerError();
+    }
+
+    @Test
+    void createContract_ShouldReturnPersistenceSerializationError_whenSerializationFails() {
+        // Arrange
+        String templateId = "template-123";
+        List<String> signerIds = List.of("signer-1", "signer-2");
+        Map<String, Object> data = Map.of("key", "value");
+
+        ContractController.CreateContractRequest request = ContractController.CreateContractRequest.builder()
+                .templateId(templateId)
+                .signerIds(signerIds)
+                .data(data)
+                .build();
+
+        when(contractUseCase.createContract(eq(templateId), eq(signerIds), eq(data)))
+                .thenReturn(Mono.error(new PersistenceSerializationException(
+                        "Failed to serialize signerIds", new RuntimeException("JSON parse error"))));
+
+        // Act & Assert
+        webTestClient.post()
+                .uri("/api/v1/contracts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().is5xxServerError()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.errorCode").isEqualTo("PERSISTENCE_SERIALIZATION_ERROR");
     }
 }
