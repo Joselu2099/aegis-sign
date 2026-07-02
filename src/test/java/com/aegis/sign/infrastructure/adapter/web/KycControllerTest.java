@@ -88,6 +88,7 @@ class KycControllerTest {
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", "dummy content".getBytes())
+                .contentType(MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", "form-data; name=file; filename=doc.pdf");
 
         webTestClient.post()
@@ -113,6 +114,7 @@ class KycControllerTest {
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", "dummy biometrics".getBytes())
+                .contentType(MediaType.IMAGE_JPEG)
                 .header("Content-Disposition", "form-data; name=file; filename=bio.jpg");
 
         webTestClient.post()
@@ -124,5 +126,61 @@ class KycControllerTest {
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.data.id").isEqualTo(id.toString());
+    }
+
+    @Test
+    void submitIdDocument_ShouldReturn415_WhenContentTypeIsNotAllowed() {
+        UUID id = UUID.randomUUID();
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", "malicious".getBytes())
+                .contentType(MediaType.TEXT_PLAIN)
+                .header("Content-Disposition", "form-data; name=file; filename=doc.txt");
+
+        webTestClient.post()
+                .uri("/api/v1/kyc/sessions/{id}/documents", id)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isEqualTo(415)
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false);
+    }
+
+    @Test
+    void submitBiometrics_ShouldReturn415_WhenPdfIsUploadedAsSelfie() {
+        UUID id = UUID.randomUUID();
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", "not a selfie".getBytes())
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "form-data; name=file; filename=bio.pdf");
+
+        webTestClient.post()
+                .uri("/api/v1/kyc/sessions/{id}/biometrics", id)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isEqualTo(415);
+    }
+
+    @Test
+    void submitIdDocument_ShouldReturn413_WhenUploadExceedsMaxSize() {
+        UUID id = UUID.randomUUID();
+        byte[] oversized = new byte[KycController.MAX_UPLOAD_BYTES + 1];
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", oversized)
+                .contentType(MediaType.IMAGE_JPEG)
+                .header("Content-Disposition", "form-data; name=file; filename=doc.jpg");
+
+        webTestClient.post()
+                .uri("/api/v1/kyc/sessions/{id}/documents", id)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isEqualTo(413)
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("UPLOAD_TOO_LARGE");
     }
 }
