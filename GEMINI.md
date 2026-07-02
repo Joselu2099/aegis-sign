@@ -1,32 +1,42 @@
 # GEMINI.md (Project Hub)
 
-This file acts as the central navigation hub for the repository. Refer to the specific documents below for detailed guidance.
+This file acts as the central navigation hub for the repository. Refer to the specific documents below for detailed guidance. Equivalent hub for other agents: [CLAUDE.md](CLAUDE.md).
 
 ## Core Documentation
 
 - **[AGENTS.md](AGENTS.md)**: Rules, workflows, and programming guidelines.
-- **[docs/setup.md](docs/setup.md)**: Installation, environment setup, and repository overview.
-- **[docs/api-guide.md](docs/api-guide.md)**: API reference, request/response examples, and integration flow.
+- **[system.md](system.md)**: Exact tech stack, installation, environment setup, and operational commands.
 
 ## Project Context
 
-Detailed technical context is located in `docs/`:
-- **Architecture**: `docs/architecture.md`
-- **Business Logic**: `docs/business-logic.md`
-- **Database**: `docs/database.md`
-- **Requirements (RF/RNF)**: `docs/requirements.md`
-- **Original Goal/Spec**: `docs/goal.md`
+Detailed, exhaustive technical context is located in `context/`:
 
-## Status & Memory
+- **Architecture**: `context/architecture.md`
+- **Business Logic**: `context/business_logic.md`
+- **Database**: `context/database.md`
+
+## Memory & Notes
 
 Operational notes and active tracking:
+
+- **Project Memory**: `notes/memory.md`
+
+## Supplementary Documentation (`docs/`)
+
+Kept in place for historical/functional value:
+
 - **Current Project Status**: `docs/status.md`
-- **Project Memory**: `docs/memory.md`
+- **Original Goal/Spec**: `docs/goal.md`
+- **Requirements (RF/RNF)**: `docs/requirements.md`
+- **API Guide**: `docs/api-guide.md`
 - **Historical Status Snapshots**: `docs/history/`
+
+> Note: `docs/architecture.md`, `docs/business-logic.md`, `docs/database.md`, and `docs/memory.md` were migrated and upgraded into `context/` and `notes/` and removed from `docs/` to avoid stale duplicates.
 
 ---
 
 ### Context & Navigation
+
 - [AGENTS.md](AGENTS.md)
-- [docs/setup.md](docs/setup.md)
-- [docs/architecture.md](docs/architecture.md)
+- [system.md](system.md)
+- [context/architecture.md](context/architecture.md)
