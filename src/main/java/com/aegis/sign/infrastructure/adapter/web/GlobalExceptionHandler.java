@@ -5,6 +5,7 @@ import com.aegis.sign.domain.exception.KycUserException;
 import com.aegis.sign.domain.exception.PersistenceSerializationException;
 import com.aegis.sign.domain.exception.ResourceNotFoundException;
 import com.aegis.sign.domain.exception.TemplateNotFoundException;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -61,5 +62,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public Mono<ResponseEntity<ApiResponse<Void>>> handlePersistenceSerializationException(PersistenceSerializationException ex) {
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(ex.getMessage(), "PERSISTENCE_SERIALIZATION_ERROR")));
+    }
+
+    @ExceptionHandler(DataBufferLimitException.class)
+    public Mono<ResponseEntity<ApiResponse<Void>>> handleUploadTooLarge(DataBufferLimitException ex) {
+        return Mono.just(ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.error("Upload exceeds the maximum allowed size", "UPLOAD_TOO_LARGE")));
+    }
+
+    @ExceptionHandler(UnsupportedUploadTypeException.class)
+    public Mono<ResponseEntity<ApiResponse<Void>>> handleUnsupportedUploadType(UnsupportedUploadTypeException ex) {
+        return Mono.just(ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ApiResponse.error(ex.getMessage(), "UPLOAD_UNSUPPORTED_TYPE")));
     }
 }
